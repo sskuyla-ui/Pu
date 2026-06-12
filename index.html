@@ -1,0 +1,2297 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bakso Cak Bam'z - Kasir Panel</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2F6BFF;
+            --primary-light: #EBF1FF;
+            --accent: #FF7A00;
+            --accent-light: #FFF3E6;
+            --white: #ffffff;
+            --text: #1E293B;
+            --text-muted: #64748B;
+            --gray: #94A3B8;
+            --light-bg: #F8FAFC;
+            --radius-sm: 12px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --shadow-sm: 0 4px 12px rgba(47, 107, 255, 0.05);
+            --shadow-md: 0 8px 24px rgba(47, 107, 255, 0.1);
+            --shadow-lg: 0 16px 36px rgba(15, 23, 42, 0.15);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+        html, body { width: 100%; min-height: 100%; background-color: #0F172A; overflow-x: hidden; }
+
+        .app-shell {
+            width: 100%; min-height: 100vh; position: relative;
+            background:
+                linear-gradient(180deg, rgba(15,23,42,0.65) 0%, rgba(30,50,100,0.45) 40%, rgba(15,23,42,0.85) 100%),
+                url('https://i.pinimg.com/736x/88/ab/1a/88ab1a1bfd783b27b407eb3cd1d73a6a.jpg') no-repeat center top;
+            background-size: cover;
+            display: flex; flex-direction: column;
+        }
+        .app-content-overlay {
+            flex: 1; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            display: flex; flex-direction: column; background: rgba(255,255,255,0.08);
+        }
+
+        /* HEADER */
+        header {
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            padding: 18px 20px; display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 4px 20px rgba(47,107,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.5);
+        }
+        header h2 { color: var(--primary); font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
+        header p { font-size: 10px; font-weight: 500; color: #6B9EFF; letter-spacing: 1.5px; margin-top: 1px; }
+
+        /* HAMBURGER */
+        .hbg-btn {
+            position: fixed; top: 14px; right: 14px; z-index: 1200;
+            width: 40px; height: 40px; border-radius: 12px;
+            background: rgba(47,107,255,0.07); backdrop-filter: blur(8px);
+            border: 1.5px solid rgba(47,107,255,0.18);
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; gap: 5px; cursor: pointer;
+        }
+        .hbg-btn span { display: block; width: 20px; height: 2px; background: var(--primary); border-radius: 2px; transition: var(--transition); }
+
+        /* SLIDEBAR */
+        .sb-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            z-index: 1300; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .sb-overlay.sb-open { opacity: 1; pointer-events: all; }
+        .sb-panel {
+            position: fixed; top: 0; left: -300px; width: 280px; height: 100%;
+            background: #0f172a; z-index: 1400;
+            transition: left 0.32s cubic-bezier(0.4,0,0.2,1);
+            display: flex; flex-direction: column;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.4); overflow-y: auto;
+        }
+        .sb-panel.sb-open { left: 0; }
+        .sb-logo { padding: 32px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .sb-logo h2 { font-size: 15px; font-weight: 800; color: white; letter-spacing: 1px; }
+        .sb-logo p { font-size: 10px; color: #6B9EFF; margin-top: 2px; letter-spacing: 1.5px; }
+        .sb-nav { flex: 1; padding: 12px 0; }
+        .sb-item {
+            display: flex; align-items: center; gap: 14px; padding: 14px 20px;
+            cursor: pointer; transition: background 0.2s; border: none; background: none;
+            width: 100%; text-align: left; color: rgba(255,255,255,0.75);
+            font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 600;
+        }
+        .sb-item:hover, .sb-item.sb-active { background: rgba(255,255,255,0.08); color: white; }
+        .sb-item .sb-icon { font-size: 18px; width: 28px; text-align: center; }
+        .sb-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 6px 20px; }
+        .sb-promo-footer {
+            padding: 16px 20px 24px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: auto;
+        }
+        .sb-promo-footer p { font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.7; }
+        .sb-promo-footer p b { color: rgba(255,255,255,0.75); }
+        .sb-promo-btn {
+            margin-top: 10px; background: var(--accent); color: white; border: none;
+            padding: 9px 16px; border-radius: 20px; font-weight: 700; font-size: 11px;
+            cursor: pointer; width: 100%; font-family: 'Poppins', sans-serif; transition: var(--transition);
+        }
+
+        /* CONTAINER */
+        .container { padding: 16px 16px 100px; }
+
+        /* STATS */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .stat-card {
+            background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            padding: 16px; border-radius: var(--radius-md); text-align: center;
+            box-shadow: var(--shadow-sm); border: 1px solid rgba(255,255,255,0.6);
+        }
+        .stat-card h3 { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 700; }
+        .stat-card p { font-size: 18px; font-weight: 800; color: var(--primary); }
+
+        /* ORDER CARDS */
+        .section-title { margin-bottom: 14px; font-size: 15px; font-weight: 800; color: white; }
+        .order-card {
+            background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-radius: var(--radius-md); padding: 16px; margin-bottom: 14px;
+            border-left: 4px solid var(--accent); box-shadow: var(--shadow-md);
+            animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        @keyframes slideUp { from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)} }
+        .order-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: var(--text); font-weight: 600; }
+        .order-header span { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+        .order-items { background: var(--light-bg); padding: 10px 12px; border-radius: var(--radius-sm); margin: 8px 0; font-size: 13px; color: var(--text); border: 1px solid #E2E8F0; }
+        .note-box { background: #FFF3E6; border: 1px solid #FFDBB5; padding: 8px 12px; border-radius: var(--radius-sm); margin-top: 6px; font-size: 12px; color: #92400E; }
+        .order-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 13px; color: var(--text-muted); }
+        .btn-action { background: var(--primary); color: white; border: none; padding: 12px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 700; width: 100%; margin-top: 10px; font-size: 14px; font-family: 'Poppins', sans-serif; transition: var(--transition); }
+        .btn-action:hover { background: #1A54F0; }
+
+        .order-action-row { display: flex; gap: 8px; margin-top: 10px; }
+        .btn-terima { flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 700; font-size: 13px; transition: var(--transition); font-family: 'Poppins', sans-serif; }
+        .btn-terima:hover { background: #1A54F0; }
+        .btn-terima:disabled { background: #93C5FD; cursor: not-allowed; }
+        .btn-selesai { flex: 1; background: var(--accent); color: white; border: none; padding: 12px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 700; font-size: 13px; transition: var(--transition); font-family: 'Poppins', sans-serif; }
+        .btn-selesai:hover { background: #E06C00; }
+
+        .order-status-badge {
+            display: inline-block; font-size: 11px; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px; letter-spacing: 0.5px; margin-bottom: 6px;
+        }
+        .badge-menunggu { background: #FFF3E0; color: #E65100; }
+        .badge-diterima { background: var(--primary-light); color: var(--primary); }
+
+        /* FULLSCREEN SECTIONS */
+        .fs-menu {
+            position: fixed; top: 0; left: -100%; width: 100%; height: 100%;
+            background: #0f172a; z-index: 1200; display: block; opacity: 0;
+            pointer-events: none; overflow-y: auto;
+            transition: left 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s;
+            padding: 70px 20px 40px;
+        }
+        .fs-menu.fs-open { left: 0; opacity: 1; pointer-events: all; }
+        .fs-inner { padding: 70px 20px 40px; }
+        .close-fs {
+            position: fixed; top: 16px; right: 16px;
+            width: 40px; height: 40px; border-radius: 12px;
+            background: rgba(255,255,255,0.1); color: white; font-size: 20px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            z-index: 1210; border: 1px solid rgba(255,255,255,0.15); transition: var(--transition);
+        }
+        .close-fs:hover { background: rgba(255,255,255,0.2); }
+        .fs-menu h2 { font-size: 20px; font-weight: 800; color: white; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+        .menu-nav-btn {
+            background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9);
+            border: 1px solid rgba(255,255,255,0.12);
+            padding: 16px 18px; border-radius: var(--radius-md); cursor: pointer; font-weight: 700;
+            width: 100%; margin-bottom: 10px; font-size: 14px; text-align: left;
+            display: flex; justify-content: space-between; align-items: center;
+            transition: var(--transition); font-family: 'Poppins', sans-serif;
+        }
+        .menu-nav-btn:hover { background: rgba(47,107,255,0.2); border-color: rgba(47,107,255,0.4); }
+
+        /* FORMS */
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; }
+        input, select {
+            width: 100%; padding: 12px 14px; border-radius: var(--radius-sm);
+            border: 1.5px solid rgba(255,255,255,0.15); outline: none;
+            background: rgba(255,255,255,0.08); color: white;
+            font-size: 14px; font-family: 'Poppins', sans-serif; transition: var(--transition);
+        }
+        input:focus, select:focus { border-color: var(--primary); background: rgba(47,107,255,0.1); }
+        input::placeholder { color: rgba(255,255,255,0.35); }
+        select option { background: #1e293b; color: white; }
+
+        /* btn-cancel pesanan */
+        .btn-cancel { flex: 1; background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.3); padding: 10px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 700; font-size: 12px; transition: var(--transition); font-family: 'Poppins', sans-serif; }
+        .btn-cancel:hover { background: rgba(239,68,68,0.22); }
+
+        .menu-mgt-card { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 10px; }
+        .menu-mgt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .menu-mgt-title { font-weight: 700; color: white; font-size: 14px; }
+        .menu-mgt-price { color: var(--gray); font-size: 12px; margin-top: 2px; }
+        .menu-mgt-actions { display: flex; gap: 8px; }
+        .menu-mgt-actions button { flex: 1; padding: 8px; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; transition: var(--transition); font-family: 'Poppins', sans-serif; }
+        .btn-toggle-true { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.3) !important; }
+        .btn-toggle-false { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3) !important; }
+        .btn-delete { background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.3) !important; }
+
+
+        /* ── MODAL EDIT MENU — LIGHT THEME OVERRIDE ── */
+        .modal-edit-inner {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+            max-height: 92vh;
+            overflow-y: auto;
+            animation: modalIn 0.25s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes modalIn { from{opacity:0;transform:scale(0.94) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)} }
+        .modal-edit-inner::-webkit-scrollbar { width: 4px; }
+        .modal-edit-inner::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+
+        .modal-form-group { margin-bottom: 14px; }
+        .modal-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+        .modal-input {
+            width: 100% !important;
+            padding: 12px 14px !important;
+            border-radius: 10px !important;
+            border: 1.5px solid #E2E8F0 !important;
+            outline: none !important;
+            background: #F8FAFC !important;
+            color: #1E293B !important;
+            font-size: 14px !important;
+            font-family: 'Poppins', sans-serif !important;
+            transition: all 0.2s !important;
+            box-sizing: border-box !important;
+        }
+        .modal-input:focus {
+            border-color: var(--primary) !important;
+            background: #EBF1FF !important;
+            box-shadow: 0 0 0 3px rgba(47,107,255,0.1) !important;
+        }
+        .modal-input::placeholder { color: #94A3B8 !important; }
+        .modal-input option { background: white; color: #1E293B; }
+
+        .modal-file-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: 10px;
+            border: 1.5px dashed #CBD5E1;
+            background: #F8FAFC;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Poppins', sans-serif;
+        }
+        .modal-file-label:hover {
+            border-color: var(--primary);
+            background: #EBF1FF;
+            color: var(--primary);
+        }
+
+        /* RIWAYAT */
+        .history-list-container { max-height: 450px; overflow-y: auto; padding: 4px; display: flex; flex-direction: column; gap: 12px; }
+        .history-list-container::-webkit-scrollbar { width: 4px; }
+        .history-list-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        .history-card { border: 1px solid rgba(255,255,255,0.1); padding: 14px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.06); }
+        .history-card p { margin: 4px 0; font-size: 13px; color: rgba(255,255,255,0.75); }
+        .history-card .order-items-history { margin: 8px 0; font-size: 13px; color: rgba(255,255,255,0.55); border-left: 2px solid rgba(47,107,255,0.4); padding-left: 10px; white-space: pre-line; }
+        .history-card .total-price { font-weight: 800; color: var(--primary); font-size: 15px; margin-top: 8px; }
+        .history-actions { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+        .history-btn { padding: 8px 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; color: #fff; flex: 1; min-width: 45%; transition: var(--transition); text-align: center; font-family: 'Poppins', sans-serif; }
+        .btn-print { background: rgba(100,116,139,0.7); }
+        .btn-txt { background: rgba(47,107,255,0.7); }
+        .btn-pdf { background: rgba(239,68,68,0.7); }
+        .btn-img { background: rgba(34,197,94,0.7); }
+        .history-btn:hover { opacity: 0.85; }
+
+        /* CHLOE AI FAB */
+        .chloe-fab {
+            position: fixed; bottom: 24px; right: 20px;
+            width: 64px; height: 64px; border-radius: 50%;
+            background: white; border: 3px solid var(--primary);
+            box-shadow: 0 8px 28px rgba(47,107,255,0.45);
+            cursor: pointer; z-index: 900;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden; transition: var(--transition);
+        }
+        .chloe-fab:hover { transform: scale(1.1); }
+        .chloe-fab img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .chloe-fab .notif-dot {
+            position: absolute; top: 2px; right: 2px;
+            width: 14px; height: 14px; background: #ff4757;
+            border-radius: 50%; border: 2px solid white; display: none;
+        }
+
+        .chloe-bubble {
+            position: fixed; bottom: 96px; right: 16px;
+            background: white; border-radius: 16px 16px 4px 16px;
+            padding: 10px 14px; max-width: 210px;
+            box-shadow: 0 6px 24px rgba(47,107,255,0.2);
+            border: 1px solid rgba(47,107,255,0.15);
+            z-index: 899; font-size: 12px; line-height: 1.5;
+            display: none; color: var(--text);
+        }
+        .chloe-bubble .cb-name { font-weight: 800; color: var(--primary); font-size: 11px; display: block; margin-bottom: 3px; }
+
+        .chloe-panel {
+            position: fixed; bottom: 96px; right: 16px;
+            width: 310px; max-height: 460px;
+            background: rgba(255,255,255,0.97); backdrop-filter: blur(16px);
+            border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(47,107,255,0.2);
+            display: none; flex-direction: column;
+            z-index: 901; overflow: hidden;
+            animation: chloeIn 0.3s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes chloeIn { from{opacity:0;transform:scale(0.9) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes bannerIn { from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+        .chloe-header { background: var(--primary); color: white; padding: 12px 16px; display: flex; gap: 10px; align-items: center; }
+        .chloe-header img { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.4); flex-shrink: 0; }
+        .chloe-header .ch-info { flex: 1; }
+        .chloe-header .ch-info .ch-name { font-weight: 800; font-size: 13px; }
+        .chloe-header .ch-info .ch-sub { font-size: 10px; opacity: 0.85; }
+        .chloe-close-btn { background: none; border: none; color: white; font-size: 18px; cursor: pointer; line-height: 1; padding: 0; }
+
+        .chloe-tabs { display: flex; background: var(--light-bg); border-bottom: 1px solid #E2E8F0; }
+        .chloe-tab { flex: 1; padding: 9px 4px; font-size: 11px; font-weight: 700; text-align: center; border: none; background: none; cursor: pointer; color: var(--gray); transition: var(--transition); font-family: 'Poppins', sans-serif; }
+        .chloe-tab.active { background: white; color: var(--primary); border-bottom: 2px solid var(--primary); }
+
+        .chloe-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        .chloe-logs { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: rgba(248,250,252,0.6); min-height: 200px; max-height: 280px; overflow-y: auto; }
+        .chloe-msg { max-width: 82%; padding: 9px 12px; border-radius: var(--radius-sm); font-size: 12px; line-height: 1.5; word-wrap: break-word; }
+        .chloe-msg.user { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
+        .chloe-msg.ai { background: white; color: var(--text); align-self: flex-start; border-bottom-left-radius: 3px; border: 1px solid #E2E8F0; white-space: pre-line; }
+        .chloe-msg.typing { color: var(--gray); font-style: italic; }
+        .chloe-input-row { padding: 8px 10px; display: flex; gap: 6px; background: white; border-top: 1px solid #E2E8F0; }
+        .chloe-input-row input { flex: 1; border: 1px solid #E2E8F0; padding: 8px 12px; border-radius: 20px; outline: none; font-size: 12px; font-family: 'Poppins', sans-serif; background: var(--light-bg); }
+        .chloe-input-row input:focus { border-color: var(--primary); background: white; }
+        .chloe-send { background: var(--primary); color: white; border: none; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Poppins', sans-serif; }
+
+        .chloe-buku { padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 360px; }
+        .buku-summary { background: linear-gradient(135deg, var(--primary), #1A54F0); color: white; padding: 14px; border-radius: var(--radius-md); }
+        .buku-summary h4 { font-size: 11px; opacity: 0.85; margin-bottom: 6px; font-weight: 600; }
+        .buku-summary .buku-omzet { font-size: 22px; font-weight: 800; }
+        .buku-summary .buku-sub { font-size: 11px; opacity: 0.9; margin-top: 4px; }
+        .buku-quick-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .buku-quick-btn { background: white; border: 1.5px solid #E2E8F0; padding: 10px 8px; border-radius: var(--radius-sm); text-align: center; cursor: pointer; font-size: 11px; font-weight: 700; color: var(--text); transition: var(--transition); }
+        .buku-quick-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+        .buku-quick-btn .bq-icon { font-size: 18px; display: block; margin-bottom: 3px; }
+        .buku-ai-result { background: var(--primary-light); border: 1px solid rgba(47,107,255,0.2); border-radius: var(--radius-sm); padding: 12px; font-size: 12px; color: var(--text); line-height: 1.6; white-space: pre-line; display: none; }
+        .buku-ai-loading { background: var(--light-bg); border-radius: var(--radius-sm); padding: 12px; font-size: 12px; color: var(--gray); font-style: italic; display: none; text-align: center; }
+        .buku-period-row { display: flex; gap: 6px; align-items: center; }
+        .buku-period-row select { flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid #E2E8F0; font-size: 12px; outline: none; background: white; color: var(--text); font-family: 'Poppins', sans-serif; }
+        .buku-period-row button { background: var(--primary); color: white; border: none; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Poppins', sans-serif; }
+
+        /* CHAT KASIR FULLSCREEN */
+        .chat-fab {
+            position: fixed; bottom: 24px; left: 20px;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: var(--primary); border: 3px solid rgba(255,255,255,0.4);
+            box-shadow: 0 6px 20px rgba(47,107,255,0.5);
+            cursor: pointer; z-index: 900;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 24px; transition: var(--transition);
+        }
+        .chat-fab:hover { transform: scale(1.1); }
+        .chat-fab .chat-fab-dot {
+            position: absolute; top: 2px; right: 2px;
+            width: 14px; height: 14px; background: #ff4757;
+            border-radius: 50%; border: 2px solid white;
+            display: none; font-size: 8px; color: white;
+            justify-content: center; align-items: center; font-weight: 800;
+        }
+
+        /* CHAT KASIR — FULLSCREEN PAGE */
+        .ck-kasir-panel {
+            position: fixed; inset: 0; z-index: 1500;
+            background: #0f172a; display: none; flex-direction: column;
+            animation: ckSlideIn 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+        .ck-kasir-panel.ck-kasir-open { display: flex; }
+        @keyframes ckSlideIn { from{transform:translateX(100%)}to{transform:translateX(0)} }
+
+        .ck-kasir-header {
+            background: rgba(255,255,255,0.05); color: white;
+            padding: 18px 16px; display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;
+        }
+        .ck-kasir-header .ckh-icon { font-size: 22px; }
+        .ck-kasir-header .ckh-info { flex: 1; }
+        .ck-kasir-header .ckh-title { font-weight: 800; font-size: 16px; }
+        .ck-kasir-header .ckh-sub { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+        .ck-kasir-close { background: rgba(255,255,255,0.1); border: none; color: white; font-size: 18px; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+        .ck-order-list { flex: 1; overflow-y: auto; background: #1e293b; }
+        .ck-order-item {
+            padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            cursor: pointer; display: flex; align-items: center; gap: 12px;
+            transition: background 0.15s;
+        }
+        .ck-order-item:hover { background: rgba(255,255,255,0.06); }
+        .ck-order-item .cko-avatar {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: rgba(47,107,255,0.2); display: flex; align-items: center;
+            justify-content: center; font-size: 20px; flex-shrink: 0; position: relative;
+        }
+        .cko-avatar .cko-unread-dot {
+            position: absolute; top: -2px; right: -2px;
+            width: 12px; height: 12px; background: #ff4757;
+            border-radius: 50%; border: 2px solid #1e293b; display: none;
+        }
+        .ck-order-item .cko-info { flex: 1; min-width: 0; }
+        .cko-info .cko-name { font-weight: 700; font-size: 13px; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cko-info .cko-preview { font-size: 11px; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+        .ck-order-item .cko-arrow { color: rgba(255,255,255,0.3); font-size: 16px; }
+        .ck-empty-chat { padding: 60px 24px; text-align: center; color: rgba(255,255,255,0.35); font-size: 14px; line-height: 1.8; }
+
+        .ck-chat-view { display: none; flex-direction: column; flex: 1; }
+        .ck-chat-topbar {
+            background: rgba(255,255,255,0.05); color: white;
+            padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;
+        }
+        .ck-chat-back { background: rgba(255,255,255,0.1); border: none; color: white; font-size: 18px; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .ck-chat-topbar .ckt-info { flex: 1; }
+        .ck-chat-topbar .ckt-name { font-weight: 700; font-size: 14px; color: white; }
+        .ck-chat-topbar .ckt-id { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+
+        .ck-chat-body {
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 10px;
+            background: #1e293b;
+        }
+        .ck-msg-k { max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 12px; line-height: 1.5; word-break: break-word; }
+        .ck-msg-k.sent { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .ck-msg-k.recv { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9); align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid rgba(255,255,255,0.12); }
+        .ck-msg-k .ck-label-k { font-size: 10px; font-weight: 700; opacity: 0.6; margin-bottom: 3px; }
+        .ck-msg-k .ck-time-k { font-size: 10px; opacity: 0.45; margin-top: 4px; text-align: right; }
+        .ck-loc-link-k { color: #7dd3fc; text-decoration: underline; }
+
+        .ck-input-bar {
+            padding: 12px 12px 20px; background: rgba(0,0,0,0.3);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+        }
+        .ck-input-bar input {
+            flex: 1; background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18); color: white;
+            padding: 10px 14px; border-radius: 30px; outline: none;
+            font-size: 12px; font-family: 'Poppins', sans-serif;
+        }
+        .ck-input-bar input::placeholder { color: rgba(255,255,255,0.35); }
+        .ck-input-bar input:focus { border-color: var(--primary); }
+        .ck-send-k {
+            background: var(--primary); color: white; border: none;
+            padding: 10px 18px; border-radius: 30px;
+            font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+<body>
+
+<!-- HAMBURGER BUTTON (fixed top-right) -->
+<button class="hbg-btn" id="hbg-btn" onclick="openSidebar()" aria-label="Menu">
+    <span></span><span></span><span></span>
+</button>
+
+<!-- SIDEBAR OVERLAY + PANEL -->
+<div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+<div class="sb-panel" id="sb-panel">
+    <div class="sb-logo">
+        <h2>🍜 CAK BAM'Z</h2>
+        <p>KASIR PANEL</p>
+    </div>
+    <div class="sb-nav">
+        <button class="sb-item" onclick="closeSidebar(); openSection('sec-tambah')">
+            <span class="sb-icon">🍔</span> Tambah Menu
+        </button>
+        <button class="sb-item" onclick="closeSidebar(); openSection('sec-kelola')">
+            <span class="sb-icon">📋</span> Kelola & Edit Menu
+        </button>
+        <button class="sb-item" onclick="closeSidebar(); openSection('sec-import')">
+            <span class="sb-icon">📥</span> Import Menu (Excel/XML)
+        </button>
+        <div class="sb-divider"></div>
+        <button class="sb-item" onclick="closeSidebar(); openSection('sec-riwayat')">
+            <span class="sb-icon">📜</span> Riwayat & Export
+        </button>
+        <div class="sb-divider"></div>
+        <button class="sb-item" onclick="closeSidebar(); if(typeof openChloePanel==='function'){openChloePanel(); switchChloeTab('pembukuan');}">
+            <span class="sb-icon">🤖</span> Chloe AI — Analisis
+        </button>
+        <button class="sb-item" onclick="closeSidebar(); toggleChatKasirPanel()">
+            <span class="sb-icon">💬</span> Chat Pelanggan
+        </button>
+    </div>
+    <div class="sb-promo-footer">
+        <p><b>Bakso Cak Bam'z</b><br>Jl. Raya Condro, Tempeh<br>Lumajang, Jawa Timur 67371</p>
+        <button class="sb-promo-btn" onclick="closeSidebar()">✕ Tutup Menu</button>
+    </div>
+</div>
+
+<div class="app-shell">
+<div class="app-content-overlay">
+
+<header>
+    <div>
+        <h2>Bakso Cak Bam'z</h2>
+        <p>KASIR PANEL</p>
+    </div>
+    <div style="width:40px"></div>
+</header>
+
+<div class="container">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Omzet Hari Ini</h3>
+            <p id="omzetTxt">Rp 0</p>
+        </div>
+        <div class="stat-card">
+            <h3>Transaksi</h3>
+            <p id="trxTxt">0</p>
+        </div>
+    </div>
+
+    <h3 class="section-title">🔔 Pesanan Masuk</h3>
+    <div id="orderList">
+        <p style="text-align:center; color:var(--gray); margin-top:20px;">Menghubungkan ke server...</p>
+    </div>
+</div><!-- .container -->
+
+</div><!-- .app-content-overlay -->
+</div><!-- .app-shell -->
+
+<div id="menuFS" class="fs-menu">
+    <span class="close-fs" onclick="closeMenu()">&times;</span>
+    <h2 style="margin-bottom:20px; padding-bottom:10px;">⚙️ Menu Kasir</h2>
+
+    <button class="menu-nav-btn" onclick="closeMenu(); openSection('sec-tambah')"><span>🍔 Tambah Menu ke Customer</span> <span>❯</span></button>
+    <button class="menu-nav-btn" onclick="closeMenu(); openSection('sec-kelola')"><span>📋 Kelola & Edit Menu</span> <span>❯</span></button>
+    <button class="menu-nav-btn" onclick="closeMenu(); openSection('sec-import')"><span>📥 Import Menu (Excel/XML)</span> <span>❯</span></button>
+    <button class="menu-nav-btn" onclick="closeMenu(); openSection('sec-riwayat')"><span>📜 Riwayat & Export Transaksi</span> <span>❯</span></button>
+    <button class="menu-nav-btn" onclick="closeMenu(); if(typeof openChloePanel==='function'){openChloePanel(); switchChloeTab('pembukuan');}"><span>🤖 Chloe AI — Analisis Omzet</span> <span>❯</span></button>
+</div>
+
+<div id="sec-tambah" class="fs-menu">
+    <span class="close-fs" onclick="closeSection('sec-tambah')">&times;</span>
+    <h2 style="margin-bottom:20px; padding-bottom:10px;">🍔 Tambah Menu Baru</h2>
+    <div id="storage-config-warning" style="background:rgba(255,200,0,0.15); border:1px solid rgba(255,200,0,0.4); border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:12px; color:#fcd34d; display:none;">
+        ⚠️ <b>Perhatian:</b> Upload foto memerlukan konfigurasi tambahan:<br>
+        1. Isi <code>storageBucket</code> di <code>firebaseConfig</code><br>
+        2. Aktifkan Firebase Storage di Console<br>
+        3. Ubah Storage Rules ke <code>allow read, write: if true</code> (untuk testing)
+    </div>
+    <div class="form-group">
+        <label>Nama Menu (Indonesia)</label>
+        <input type="text" id="menu-n" placeholder="Contoh: Bakso Urat Jumbo">
+    </div>
+    <div class="form-group">
+        <label>Nama Menu (Inggris)</label>
+        <input type="text" id="menu-ne" placeholder="Contoh: Jumbo Tendon Meatball">
+    </div>
+    <div class="form-group">
+        <label>Harga Menu (Rp)</label>
+        <input type="number" id="menu-p" placeholder="Contoh: 15000">
+    </div>
+    <div class="form-group">
+        <label>Kategori</label>
+        <select id="menu-cat">
+            <option value="makanan">Makanan</option>
+            <option value="minuman">Minuman</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>📷 Foto Menu (Opsional)</label>
+        <input type="file" id="menu-img" accept="image/*" style="color:white; font-size:13px;" onchange="previewMenuImg(this)">
+        <div id="menu-img-preview" style="display:none; margin-top:10px; position:relative; border-radius:12px; overflow:hidden; height:140px;">
+            <img id="menu-img-preview-img" style="width:100%; height:100%; object-fit:cover; display:block;">
+            <button onclick="clearMenuImg()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.5);color:white;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+        <div id="menu-img-progress" style="display:none; margin-top:8px; padding:8px 12px; background:rgba(47,107,255,0.15); border-radius:8px; font-size:12px; color:#93c5fd;"></div>
+    </div>
+    <button class="btn-action" onclick="submitMenu()">🚀 Tambahkan Menu</button>
+</div>
+
+<div id="sec-kelola" class="fs-menu">
+    <span class="close-fs" onclick="closeSection('sec-kelola')">&times;</span>
+    <h2 style="margin-bottom:20px; padding-bottom:10px;">📋 Kelola & Status Menu</h2>
+    <div id="menuControlList">
+        <p style="text-align:center; color:var(--gray); font-size: 12px;">Memuat menu...</p>
+    </div>
+</div>
+
+<div id="sec-riwayat" class="fs-menu">
+    <span class="close-fs" onclick="closeSection('sec-riwayat')">&times;</span>
+    <h2 style="margin-bottom:20px; padding-bottom:10px;">📜 Riwayat & Export Transaksi</h2>
+    <div class="form-group">
+        <label>Pilih Tanggal Untuk Diunduh</label>
+        <input type="date" id="exportDate">
+    </div>
+    <button class="btn-action" style="background:var(--accent);" onclick="exportHistory()">📥 Unduh File Riwayat (.txt)</button>
+    <hr style="margin: 15px 0; border-top: 1px dashed rgba(255,255,255,0.2);">
+    <h4 style="font-size:14px; margin-bottom:10px; color: rgba(255,255,255,0.8);">Catatan Riwayat Lokal:</h4>
+    
+    <div id="historyList" class="history-list-container">
+        <p style="color:var(--gray); font-size:12px; text-align:center;">Belum ada riwayat transaksi.</p>
+    </div>
+
+    <button class="btn-action" style="background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.7); margin-top:15px;" onclick="resetHistory()">Hapus Semua Riwayat</button>
+</div>
+
+
+<!-- MODAL EDIT MENU -->
+<div id="modal-edit-menu" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; padding:16px;">
+    <div class="modal-edit-inner">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+            <h3 style="color:#1E293B; font-size:17px; font-weight:800;">✏️ Edit Menu</h3>
+            <button onclick="document.getElementById('modal-edit-menu').style.display='none'" style="background:#f1f5f9; border:none; width:32px; height:32px; border-radius:50%; font-size:16px; cursor:pointer; color:#64748B; display:flex; align-items:center; justify-content:center;">✕</button>
+        </div>
+        <input type="hidden" id="edit-menu-id">
+        <input type="hidden" id="edit-menu-img-url">
+        <div class="modal-form-group">
+            <label class="modal-label">Nama Menu (Indonesia)</label>
+            <input class="modal-input" type="text" id="edit-menu-n" placeholder="Contoh: Bakso Urat Jumbo">
+        </div>
+        <div class="modal-form-group">
+            <label class="modal-label">Nama Menu (Inggris)</label>
+            <input class="modal-input" type="text" id="edit-menu-ne" placeholder="Contoh: Jumbo Tendon Meatball">
+        </div>
+        <div class="modal-form-group">
+            <label class="modal-label">Harga (Rp)</label>
+            <input class="modal-input" type="number" id="edit-menu-p" placeholder="Contoh: 15000">
+        </div>
+        <div class="modal-form-group">
+            <label class="modal-label">Kategori</label>
+            <select class="modal-input" id="edit-menu-cat">
+                <option value="makanan">🍜 Makanan</option>
+                <option value="minuman">🥤 Minuman</option>
+            </select>
+        </div>
+        <div class="modal-form-group">
+            <label class="modal-label">📷 Ganti Foto Menu <span style="font-weight:400; color:#94A3B8;">(Opsional)</span></label>
+            <div id="edit-img-current" style="display:none; margin-bottom:8px; border-radius:10px; overflow:hidden; height:110px; background:#f1f5f9;">
+                <img id="edit-img-current-img" style="width:100%; height:100%; object-fit:cover;">
+            </div>
+            <label class="modal-file-label" for="edit-menu-img">
+                <span id="edit-file-label-text">📁 Pilih Foto Baru</span>
+            </label>
+            <input type="file" id="edit-menu-img" accept="image/*" style="display:none;" onchange="previewEditImg(this)">
+            <div id="edit-img-progress" style="display:none; margin-top:6px; font-size:12px; color:var(--primary); padding:8px 12px; background:#EBF1FF; border-radius:8px; font-weight:600;"></div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button onclick="saveEditMenu()" style="flex:1; padding:14px; background:var(--primary); color:white; border:none; border-radius:10px; font-weight:800; cursor:pointer; font-size:14px; font-family:'Poppins',sans-serif; letter-spacing:0.3px;">💾 Simpan Perubahan</button>
+            <button onclick="document.getElementById('modal-edit-menu').style.display='none'" style="padding:14px 20px; background:#f1f5f9; color:#64748B; border:none; border-radius:10px; font-weight:700; cursor:pointer; font-size:13px; font-family:'Poppins',sans-serif;">Batal</button>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION IMPORT MENU -->
+<div id="sec-import" class="fs-menu">
+    <span class="close-fs" onclick="closeSection('sec-import')">&times;</span>
+    <h2 style="margin-bottom:20px; border-bottom:2px solid #eee; padding-bottom:10px;">📥 Import Menu</h2>
+
+    <div style="background:#e8f5e9; border-radius:12px; padding:14px; margin-bottom:16px; font-size:13px; color:#2d6a4f;">
+        <b>Format Excel (.xlsx/.xls/.csv):</b><br>
+        Kolom: <code>nama | nama_en | harga | kategori</code><br>
+        Kategori: <code>makanan</code> atau <code>minuman</code>
+    </div>
+
+    <div class="form-group">
+        <label>📊 Import dari Excel / CSV</label>
+        <input type="file" id="import-excel-file" accept=".xlsx,.xls,.csv" style="padding:8px;">
+    </div>
+    <button class="btn-action" onclick="importExcel()" style="margin-bottom:20px;">🚀 Import Excel</button>
+
+    <hr style="border-top:1px dashed rgba(255,255,255,0.2); margin:16px 0;">
+
+    <div style="background:#e3f2fd; border-radius:12px; padding:14px; margin-bottom:16px; font-size:13px; color:#1a237e;">
+        <b>Format XML Preset:</b><br>
+        <code style="font-size:11px;">&lt;menus&gt;&lt;item&gt;&lt;nama&gt;...&lt;/nama&gt;&lt;nama_en&gt;...&lt;/nama_en&gt;&lt;harga&gt;...&lt;/harga&gt;&lt;kategori&gt;...&lt;/kategori&gt;&lt;/item&gt;&lt;/menus&gt;</code>
+    </div>
+
+    <div class="form-group">
+        <label>📄 Import dari XML Preset</label>
+        <input type="file" id="import-xml-file" accept=".xml" style="padding:8px;">
+    </div>
+    <button class="btn-action" onclick="importXML()" style="background:#1565c0; margin-bottom:20px;">🚀 Import XML</button>
+
+    <div id="import-log" style="background:#f9f9f9; border-radius:8px; padding:12px; font-size:12px; color:#555; min-height:40px; display:none;"></div>
+</div>
+
+<div id="hidden-receipt-container" style="position:absolute; top:-9999px; left:-9999px; z-index:-1; background:white;">
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, onValue, remove, push, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+    import { getStorage, ref as sRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyPlaceholderKeyReplaceWithYours",
+        authDomain: "bakso-cak-bamz.firebaseapp.com",
+        databaseURL: "https://bakso-cak-bamz-default-rtdb.asia-southeast1.firebasedatabase.app/",
+        projectId: "bakso-cak-bamz",
+        storageBucket: "bakso-cak-bamz.appspot.com"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const storage = getStorage(app);
+
+    let salesHistory = JSON.parse(localStorage.getItem('bakso_sales_v2')) || [];
+
+    // ==========================================
+    // NOTIFIKASI SUARA PESANAN BARU (Web Audio API)
+    // ==========================================
+    let audioCtx = null;
+    let firstLoadPesanan = true;
+    let lastOrderCount = 0;
+    let audioUnlocked = false;
+
+    // Unlock audio — lazy init + resume untuk HTTPS/Netlify
+    async function unlockAudio() {
+        if (audioUnlocked) return;
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            // Silent buffer untuk "membuka" context
+            const buf = audioCtx.createBuffer(1, 1, 22050);
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf; src.connect(audioCtx.destination); src.start(0);
+            audioUnlocked = true;
+        } catch(e) { console.warn("Audio unlock failed:", e); }
+    }
+    document.addEventListener('touchstart', unlockAudio, {once: true});
+    document.addEventListener('click', unlockAudio, {once: true});
+    document.addEventListener('keydown', unlockAudio, {once: true});
+
+    // Mainkan suara notifikasi "ding" menggunakan Web Audio API
+    function playNotifSound() {
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const tones = [880, 1100];
+            tones.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.18);
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime + i * 0.18);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.18 + 0.4);
+                osc.start(audioCtx.currentTime + i * 0.18);
+                osc.stop(audioCtx.currentTime + i * 0.18 + 0.4);
+            });
+        } catch(e) {
+            try {
+                const snd = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                snd.volume = 0.7;
+                snd.play().catch(()=>{});
+            } catch(e2) {}
+        }
+    }
+
+    // Tampilkan notifikasi visual baru pesanan
+    function showNewOrderBanner(count) {
+        // Banner visual di atas
+        let banner = document.getElementById('new-order-banner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'new-order-banner';
+            banner.style.cssText = `
+                position:fixed; top:65px; left:50%; transform:translateX(-50%);
+                background:#ff7600; color:white; padding:10px 22px;
+                border-radius:25px; font-weight:bold; font-size:14px;
+                z-index:9999; box-shadow:0 4px 16px rgba(255,118,0,0.4);
+                animation: bannerIn 0.3s ease; pointer-events:none;
+            `;
+            document.body.appendChild(banner);
+        }
+        banner.textContent = `🔔 +${count} Pesanan Baru Masuk!`;
+        banner.style.display = 'block';
+        clearTimeout(banner._timer);
+        banner._timer = setTimeout(() => { banner.style.display = 'none'; }, 3500);
+
+        // Chloe AI kirim notif sebagai pesan chat otomatis
+        const chloeLogs = document.getElementById('chloe-logs');
+        if (chloeLogs) {
+            const pesanChloe = [
+                `Hmph! Goshujin-sama, ada ${count} pesanan baru masuk nih! Cepat diproses dong! 🔔`,
+                `Eh, ada pesanan datang Goshujin-sama! ${count} pesanan nunggu, jangan sampai telat! 🛎️`,
+                `B-bukan berarti aku mau ngingetin ya... tapi ada ${count} pesanan baru! Buruan! 😤`,
+                `Goshujin-sama! ${count} pesanan baru masuk! Aku udah lihat duluan, makanya langsung lapor! 🔔`
+            ];
+            const pesan = pesanChloe[Math.floor(Math.random() * pesanChloe.length)];
+            const bubble = document.createElement('div');
+            bubble.className = 'chloe-msg ai';
+            bubble.style.cssText = 'border-left:3px solid #ff7600; background:#fff8f0;';
+            bubble.innerHTML = `<b>🔔 Notifikasi Pesanan</b><br>${pesan}`;
+            chloeLogs.appendChild(bubble);
+            chloeLogs.scrollTop = chloeLogs.scrollHeight;
+
+            // Tampilkan notif badge Chloe
+            const notif = document.getElementById('chloe-notif');
+            if (notif) notif.style.display = 'block';
+        }
+    }
+
+    // KONEKSI DAN BACA PESANAN DARI FIREBASE
+    onValue(ref(db, 'pesanan'), (snapshot) => {
+        const data = snapshot.val();
+        const container = document.getElementById('orderList');
+        container.innerHTML = "";
+
+        const currentOrderCount = data ? Object.keys(data).length : 0;
+
+        if (!firstLoadPesanan && currentOrderCount > lastOrderCount) {
+            const newCount = currentOrderCount - lastOrderCount;
+            playNotifSound();
+            showNewOrderBanner(newCount);
+            document.getElementById('chloe-notif').style.display = 'block';
+        }
+        
+        lastOrderCount = currentOrderCount;
+        firstLoadPesanan = false;
+
+        if (!data) {
+            container.innerHTML = `<p style="text-align:center; color:var(--gray); margin-top:20px;">Tidak ada pesanan aktif.</p>`;
+            return;
+        }
+
+        const sortedOrders = Object.entries(data).sort((a, b) => {
+            const timeA = new Date(a[1].waktu || 0);
+            const timeB = new Date(b[1].waktu || 0);
+            return timeB - timeA;
+        });
+
+        for (let [id, o] of sortedOrders) {
+            const div = document.createElement('div');
+            div.className = "order-card";
+            
+            const namaPelanggan = o.nama ? ` (${o.nama})` : '';
+            const statusPesanan = o.status || 'menunggu';
+            const isAccepted = statusPesanan === 'diterima';
+
+            const badgeClass = isAccepted ? 'badge-diterima' : 'badge-menunggu';
+            const badgeText  = isAccepted ? '👨‍🍳 Sedang Dimasak' : '🕐 Menunggu Diterima';
+
+            div.innerHTML = `
+                <div class="order-header">
+                    <strong>📍 ${o.nomer_meja || o.tipe || 'Meja'}${namaPelanggan}</strong>
+                    <span>${o.waktu}</span>
+                </div>
+                <span class="order-status-badge ${badgeClass}">${badgeText}</span>
+                <div class="order-items"><b>Pesanan:</b><br>${o.items}</div>
+                ${o.catatan && o.catatan !== "-" ? `<div class="note-box"><b>Catatan:</b> ${o.catatan}</div>` : ""}
+                <div class="order-footer">
+                    <span>Bayar: <b>${o.pembayaran || o.metode}</b></span>
+                    <strong style="color:var(--primary); font-size:18px;">Rp ${Number(o.total || 0).toLocaleString()}</strong>
+                </div>
+                <div class="order-action-row">
+                    <button class="btn-terima" id="btn-terima-${id}" onclick="acceptOrder('${id}')" ${isAccepted ? 'disabled' : ''}>
+                        ${isAccepted ? '✅ Diterima' : '👋 Terima Pesanan'}
+                    </button>
+                    <button class="btn-selesai" onclick="finishOrder('${id}', ${JSON.stringify(o).replace(/"/g, '&quot;')})">
+                        ✔ Selesaikan
+                    </button>
+                </div>
+                <div class="order-action-row" style="margin-top:6px;">
+                    <button class="btn-cancel" onclick="cancelOrder('${id}', '${(o.nomer_meja||o.tipe||'Meja').replace(/['"]/g,'')}${o.nama ? ' ('+o.nama.replace(/['"]/g,'')+')' : ''}')">
+                        🚫 Batalkan Pesanan
+                    </button>
+                    <button class="btn-action" id="btn-chat-${id}" style="background:#1565C0; margin-top:0; flex:1;" onclick="openChatKasirOrder('${id}', '${(o.nomer_meja||o.tipe||'Meja').replace(/['"]/g,'')}${o.nama ? ' ('+o.nama.replace(/['"]/g,'')+')' : ''}')">
+                        💬 Chat <span id="unread-badge-${id}" style="display:none; background:#ff4757; color:white; font-size:10px; padding:1px 6px; border-radius:10px; margin-left:4px;">●</span>
+                    </button>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+    });
+
+    // BACA DAN TAMPILKAN SEMUA MENU UNTUK DIKELOLA
+    onValue(ref(db, 'menus'), (snapshot) => {
+        const data = snapshot.val();
+        const container = document.getElementById('menuControlList');
+        container.innerHTML = "";
+
+        if (!data) {
+            container.innerHTML = `<p style="text-align:center; color:var(--gray); font-size:12px;">Belum ada menu yang ditambahkan.</p>`;
+            return;
+        }
+
+        for (let id in data) {
+            const m = data[id];
+            const isAvailable = m.available !== false; 
+            const statusIcon = isAvailable ? "✅ Tersedia" : "❌ Habis";
+
+            const div = document.createElement('div');
+            div.className = "menu-mgt-card";
+            
+            const statusButton = isAvailable 
+                ? `<button class="btn-toggle-false" onclick="changeMenuStatus('${id}', false)">Tandai Habis</button>`
+                : `<button class="btn-toggle-true" onclick="changeMenuStatus('${id}', true)">Tandai Tersedia</button>`;
+
+            const imgUrl = m.image || '';
+            const imgThumb = imgUrl
+                ? `<img src="${imgUrl}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid rgba(255,255,255,0.1);" onerror="this.style.display='none'">`
+                : `<div style="width:48px;height:48px;border-radius:8px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🍜</div>`;
+
+            div.innerHTML = `
+                <div class="menu-mgt-header" style="gap:10px;">
+                    ${imgThumb}
+                    <div style="flex:1; min-width:0;">
+                        <div class="menu-mgt-title">${m.n}</div>
+                        <div class="menu-mgt-price">Rp ${Number(m.p || 0).toLocaleString()}</div>
+                    </div>
+                    <span>${statusIcon}</span>
+                </div>
+                <div class="menu-mgt-actions">
+                    ${statusButton}
+                    <button style="flex:1; padding:8px; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; background:#e3f2fd; color:#1565c0; border:1px solid #1565c0;" onclick="editMenu('${id}', '${m.n.replace(/'/g,"\\'")}', ${m.p}, '${m.cat||"makanan"}', '${(m.n_en||m.n).replace(/'/g,"\\'")}', '${imgUrl}')">✏️ Edit</button>
+                    <button class="btn-delete" onclick="deleteMenu('${id}')">Hapus</button>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+    });
+
+    window.changeMenuStatus = (id, status) => {
+        update(ref(db, 'menus/' + id), { available: status }).catch(err => alert("Gagal mengubah status: " + err.message));
+    }
+
+    window.deleteMenu = (id) => {
+        if(confirm("Apakah Anda yakin ingin menghapus menu ini? Tindakan ini tidak dapat dibatalkan.")) {
+            remove(ref(db, 'menus/' + id)).catch(err => alert("Gagal menghapus menu: " + err.message));
+        }
+    }
+
+    // ── KOMPRESI GAMBAR (otomatis jika > 500KB) ───────────────────
+    async function compressImage(file, maxW = 900, quality = 0.78) {
+        return new Promise(resolve => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                if (w > maxW) { h = Math.round((h * maxW) / w); w = maxW; }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                URL.revokeObjectURL(url);
+                canvas.toBlob(blob => resolve(blob || file), 'image/jpeg', quality);
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+            img.src = url;
+        });
+    }
+
+    // ── UPLOAD GAMBAR KE FIREBASE STORAGE ────────────────────────
+    async function uploadMenuImage(file, progressEl) {
+        const compressed = file.size > 500_000 ? await compressImage(file) : file;
+        const fileName = `menu-images/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const imgRef = sRef(storage, fileName);
+        return new Promise((resolve, reject) => {
+            const task = uploadBytesResumable(imgRef, compressed, {
+                contentType: compressed.type || 'image/jpeg',
+            });
+            task.on('state_changed',
+                snap => {
+                    const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+                    if (progressEl) progressEl.innerHTML = `⏳ Mengupload foto... ${pct}%`;
+                },
+                err => {
+                    console.error('[Storage Error]', err.code, err.message);
+                    let msg = err.message;
+                    if (err.code === 'storage/unauthorized') {
+                        msg = 'Akses ditolak — buka Firebase Console > Storage > Rules, ubah ke: allow read, write: if true';
+                    } else if (err.code === 'storage/unknown') {
+                        msg = 'Error tidak diketahui. Pastikan storageBucket di firebaseConfig sudah benar.';
+                    }
+                    reject(new Error(msg));
+                },
+                async () => {
+                    const url = await getDownloadURL(task.snapshot.ref);
+                    resolve(url);
+                }
+            );
+        });
+    }
+
+    window.previewMenuImg = (input) => {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('menu-img-preview').style.display = 'block';
+            document.getElementById('menu-img-preview-img').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    window.clearMenuImg = () => {
+        document.getElementById('menu-img').value = '';
+        document.getElementById('menu-img-preview').style.display = 'none';
+        document.getElementById('menu-img-progress').style.display = 'none';
+    };
+
+    window.previewEditImg = (input) => {
+        const file = input.files[0];
+        if (!file) return;
+        // Update label teks
+        const labelEl = document.getElementById('edit-file-label-text');
+        if (labelEl) labelEl.textContent = '✅ ' + file.name.slice(0, 28) + (file.name.length > 28 ? '...' : '');
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('edit-img-current').style.display = 'block';
+            document.getElementById('edit-img-current-img').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // ── CEK KONFIGURASI STORAGE ──────────────────────────────────
+    function checkStorageConfig() {
+        const warningEl = document.getElementById('storage-config-warning');
+        if (!warningEl) return;
+        // Coba akses storage bucket — jika config tidak valid, bucket akan kosong
+        try {
+            const testRef = sRef(storage, '_test_');
+            const bucket = testRef.bucket;
+            if (!bucket || bucket.includes('placeholder') || bucket.includes('undefined')) {
+                warningEl.style.display = 'block';
+            }
+        } catch(e) {
+            warningEl.style.display = 'block';
+        }
+    }
+    // Jalankan pengecekan setelah DOM siap
+    setTimeout(checkStorageConfig, 500);
+
+    window.submitMenu = async () => {
+        const n = document.getElementById('menu-n').value.trim();
+        const ne = document.getElementById('menu-ne').value.trim();
+        const p = parseInt(document.getElementById('menu-p').value);
+        const cat = document.getElementById('menu-cat').value;
+        const imgFile = document.getElementById('menu-img').files[0];
+
+        if (!n || !p) return alert("Nama menu dan harga wajib diisi!");
+
+        const progressEl = document.getElementById('menu-img-progress');
+        let imageUrl = '';
+
+        if (imgFile) {
+            progressEl.style.display = 'block';
+            progressEl.innerHTML = '⏳ Mempersiapkan foto...';
+            try {
+                imageUrl = await uploadMenuImage(imgFile, progressEl);
+                progressEl.innerHTML = '✅ Foto berhasil diupload!';
+            } catch (err) {
+                progressEl.innerHTML = `⚠️ Gagal upload: ${err.message}`;
+                console.error('Upload error:', err);
+                // Menu tetap bisa disimpan tanpa foto
+            }
+        }
+
+        const itemBaru = { n, n_en: ne || n, p, cat, available: true };
+        if (imageUrl) itemBaru.image = imageUrl;
+
+        push(ref(db, 'menus'), itemBaru).then(() => {
+            alert("Menu berhasil ditambahkan ke web customer!");
+            document.getElementById('menu-n').value = "";
+            document.getElementById('menu-ne').value = "";
+            document.getElementById('menu-p').value = "";
+            document.getElementById('menu-img').value = "";
+            document.getElementById('menu-img-preview').style.display = 'none';
+            progressEl.style.display = 'none';
+            closeSection('sec-tambah');
+        }).catch(err => alert("Gagal menyimpan menu: " + err.message));
+    };
+
+
+    // ── EDIT MENU ──────────────────────────────────────────────────
+    window.editMenu = (id, nama, harga, cat, namaEn, imgUrl) => {
+        document.getElementById('edit-menu-id').value = id;
+        document.getElementById('edit-menu-n').value = nama;
+        document.getElementById('edit-menu-ne').value = namaEn || nama;
+        document.getElementById('edit-menu-p').value = harga;
+        document.getElementById('edit-menu-cat').value = cat || 'makanan';
+        document.getElementById('edit-menu-img-url').value = imgUrl || '';
+        document.getElementById('edit-menu-img').value = '';
+        document.getElementById('edit-img-progress').style.display = 'none';
+
+        // Tampilkan gambar saat ini jika ada
+        const curImgDiv = document.getElementById('edit-img-current');
+        const curImgEl = document.getElementById('edit-img-current-img');
+        if (imgUrl) {
+            curImgEl.src = imgUrl;
+            curImgDiv.style.display = 'block';
+        } else {
+            curImgDiv.style.display = 'none';
+        }
+        document.getElementById('modal-edit-menu').style.display = 'flex';
+    };
+
+    window.saveEditMenu = async () => {
+        const id  = document.getElementById('edit-menu-id').value;
+        const n   = document.getElementById('edit-menu-n').value.trim();
+        const ne  = document.getElementById('edit-menu-ne').value.trim();
+        const p   = parseInt(document.getElementById('edit-menu-p').value);
+        const cat = document.getElementById('edit-menu-cat').value;
+        const newImgFile = document.getElementById('edit-menu-img').files[0];
+        let imgUrl = document.getElementById('edit-menu-img-url').value || '';
+
+        if (!n || !p) return alert("Nama dan harga wajib diisi!");
+
+        const progressEl = document.getElementById('edit-img-progress');
+
+        if (newImgFile) {
+            progressEl.style.display = 'block';
+            progressEl.innerHTML = '⏳ Mengupload foto baru...';
+            try {
+                imgUrl = await uploadMenuImage(newImgFile, progressEl);
+                progressEl.innerHTML = '✅ Foto diperbarui!';
+            } catch (err) {
+                progressEl.innerHTML = '⚠️ Gagal upload foto baru';
+                console.error('Upload error:', err);
+            }
+        }
+
+        const updateData = { n, n_en: ne || n, p, cat };
+        if (imgUrl) updateData.image = imgUrl;
+
+        update(ref(db, 'menus/' + id), updateData)
+            .then(() => {
+                document.getElementById('modal-edit-menu').style.display = 'none';
+                alert("Menu berhasil diperbarui!");
+            })
+            .catch(err => alert("Gagal menyimpan: " + err.message));
+    };
+
+    // ── IMPORT EXCEL / CSV ─────────────────────────────────────────
+    window.importExcel = async () => {
+        const file = document.getElementById('import-excel-file').files[0];
+        if (!file) return alert("Pilih file Excel atau CSV terlebih dahulu!");
+        const log = document.getElementById('import-log');
+        log.style.display = 'block';
+        log.innerHTML = "⏳ Membaca file...";
+
+        const ext = file.name.split('.').pop().toLowerCase();
+
+        if (ext === 'csv') {
+            const text = await file.text();
+            const rows = text.split(/\r?\n/).filter(r => r.trim());
+            let count = 0, errors = [];
+            const promises = [];
+            for (let i = 1; i < rows.length; i++) {
+                const cols = rows[i].split(/[,;\t]/);
+                const n    = (cols[0]||'').trim().replace(/^"|"$/g,'');
+                const ne   = (cols[1]||n).trim().replace(/^"|"$/g,'');
+                const p    = parseInt((cols[2]||'0').replace(/[^0-9]/g,''));
+                const cat  = (cols[3]||'makanan').trim().toLowerCase().replace(/^"|"$/g,'');
+                if (!n || !p) { errors.push(`Baris ${i+1}: data tidak lengkap`); continue; }
+                promises.push(push(ref(db, 'menus'), { n, n_en: ne, p, cat: cat.includes('minum') ? 'minuman' : 'makanan', available: true }));
+                count++;
+            }
+            await Promise.all(promises);
+            log.innerHTML = `✅ ${count} menu berhasil diimport dari CSV.${errors.length ? '<br>⚠️ ' + errors.join('<br>') : ''}`;
+        } else {
+            // XLSX menggunakan SheetJS via CDN
+            if (!window.XLSX) {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                document.head.appendChild(script);
+                await new Promise(r => script.onload = r);
+            }
+            const buf  = await file.arrayBuffer();
+            const wb   = window.XLSX.read(buf, { type: 'array' });
+            const ws   = wb.Sheets[wb.SheetNames[0]];
+            const rows = window.XLSX.utils.sheet_to_json(ws, { header: 1 });
+            let count = 0, errors = [];
+            const promises = [];
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const n   = String(row[0]||'').trim();
+                const ne  = String(row[1]||n).trim();
+                const p   = parseInt(String(row[2]||0).replace(/[^0-9]/g,''));
+                const cat = String(row[3]||'makanan').trim().toLowerCase();
+                if (!n || !p) { errors.push(`Baris ${i+1}: data tidak lengkap`); continue; }
+                promises.push(push(ref(db, 'menus'), { n, n_en: ne, p, cat: cat.includes('minum') ? 'minuman' : 'makanan', available: true }));
+                count++;
+            }
+            await Promise.all(promises);
+            log.innerHTML = `✅ ${count} menu berhasil diimport dari Excel.${errors.length ? '<br>⚠️ ' + errors.join('<br>') : ''}`;
+        }
+    };
+
+    // ── IMPORT XML PRESET ──────────────────────────────────────────
+    window.importXML = async () => {
+        const file = document.getElementById('import-xml-file').files[0];
+        if (!file) return alert("Pilih file XML terlebih dahulu!");
+        const log = document.getElementById('import-log');
+        log.style.display = 'block';
+        log.innerHTML = "⏳ Membaca XML...";
+        const text   = await file.text();
+        const parser = new DOMParser();
+        const xml    = parser.parseFromString(text, 'application/xml');
+        const items  = xml.querySelectorAll('item');
+        if (!items.length) { log.innerHTML = "❌ Tidak ada item ditemukan. Periksa format XML."; return; }
+        let count = 0;
+        const promises = [];
+        items.forEach(item => {
+            const n   = item.querySelector('nama')?.textContent.trim() || '';
+            const ne  = item.querySelector('nama_en')?.textContent.trim() || n;
+            const p   = parseInt(item.querySelector('harga')?.textContent || 0);
+            const cat = (item.querySelector('kategori')?.textContent || 'makanan').trim().toLowerCase();
+            if (!n || !p) return;
+            promises.push(push(ref(db, 'menus'), { n, n_en: ne, p, cat: cat.includes('minum') ? 'minuman' : 'makanan', available: true }));
+            count++;
+        });
+        await Promise.all(promises);
+        log.innerHTML = `✅ ${count} menu berhasil diimport dari XML.`;
+    };
+
+    window.acceptOrder = (id) => {
+        update(ref(db, 'pesanan/' + id), { status: 'diterima' })
+            .then(() => {
+                // UI update langsung tanpa reload
+                const btn = document.getElementById('btn-terima-' + id);
+                if (btn) { btn.disabled = true; btn.textContent = '✅ Diterima'; }
+            })
+            .catch(err => alert("Gagal update status: " + err.message));
+    };
+
+    window.cancelOrder = (id, label) => {
+        const konfirmasi = confirm(
+            `⚠️ Batalkan pesanan dari:\n"${label}"?\n\nPesanan akan dihapus permanen dari antrian.\nGunakan ini untuk pesanan fiktif atau salah input.`
+        );
+        if (!konfirmasi) return;
+
+        // Tandai status dibatalkan dulu agar pelanggan bisa dapat notif, lalu hapus
+        update(ref(db, 'pesanan/' + id), { status: 'dibatalkan' })
+            .finally(() => {
+                setTimeout(() => {
+                    remove(ref(db, 'pesanan/' + id))
+                        .then(() => {
+                            // Banner pemberitahuan
+                            let banner = document.getElementById('new-order-banner');
+                            if (!banner) {
+                                banner = document.createElement('div');
+                                banner.id = 'new-order-banner';
+                                document.body.appendChild(banner);
+                            }
+                            banner.style.cssText = `
+                                position:fixed; top:65px; left:50%; transform:translateX(-50%);
+                                background:#ef4444; color:white; padding:10px 22px;
+                                border-radius:25px; font-weight:bold; font-size:14px;
+                                z-index:9999; box-shadow:0 4px 16px rgba(239,68,68,0.4);
+                                pointer-events:none;
+                            `;
+                            banner.textContent = `🚫 Pesanan "${label}" dibatalkan`;
+                            banner.style.display = 'block';
+                            clearTimeout(banner._timer);
+                            banner._timer = setTimeout(() => { banner.style.display = 'none'; }, 3000);
+                        })
+                        .catch(err => alert("Gagal membatalkan pesanan: " + err.message));
+                }, 800);
+            });
+    };
+
+    window.finishOrder = (id, orderData) => {
+        if(confirm("Yakin pesanan ini sudah selesai?")) {
+            if(!orderData.waktu) orderData.waktu = new Date().toLocaleString('id-ID');
+            orderData.total = Number(orderData.total) || 0;
+            salesHistory.unshift(orderData); 
+            localStorage.setItem('bakso_sales_v2', JSON.stringify(salesHistory));
+            // Tulis status selesai dulu agar pelanggan dapat notif, lalu hapus
+            update(ref(db, 'pesanan/' + id), { status: 'selesai' }).finally(() => {
+                setTimeout(() => remove(ref(db, 'pesanan/' + id)), 1500);
+            });
+            updateUI();
+            alert("Pesanan berhasil diselesaikan!");
+        }
+    }
+
+    // ==========================================
+    // GENERATOR STRUK — HTML-BASED (DIPERBARUI)
+    // ==========================================
+    function buildReceiptHTML(trx, forPrint = false) {
+        const waktu   = trx.waktu   || new Date().toLocaleString('id-ID');
+        const nama    = trx.nama    || trx.nomer_meja || trx.tipe || 'Umum';
+        const catatan = (trx.catatan && trx.catatan !== '-') ? trx.catatan : null;
+        const total   = Number(trx.total) || 0;
+        const metode  = trx.pembayaran || trx.metode || 'Tunai';
+
+        const rawItems = (trx.items || '-').split(/,\s*/).map(s => s.trim()).filter(Boolean);
+
+        const itemRows = rawItems.map(item => {
+            const m = item.match(/^(.+?)\s*[\(\[]\s*(\d+)\s*x?\s*[\)\]]$/) || item.match(/^(.+?)\s+x(\d+)$/i);
+            if (m) {
+                return `<tr>
+                    <td style="padding:6px 0; word-break:break-word; max-width:200px;">${m[1].trim()}</td>
+                    <td style="padding:6px 0; text-align:center; white-space:nowrap;">${m[2]}x</td>
+                </tr>`;
+            }
+            return `<tr><td colspan="2" style="padding:6px 0; word-break:break-word;">${item}</td></tr>`;
+        }).join('');
+
+        // Diperlebar dan diberi border bayangan lembut agar enak dipandang sebagai PDF/Gambar
+        const baseStyle = `
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: #fff;
+            width: 380px;
+            padding: 30px 25px;
+            box-sizing: border-box;
+            border: 1px solid #eaeaea;
+            border-radius: 8px;
+            margin: 0 auto;
+        `;
+
+        // Style khusus print: Hapus batas tepi, sesuaikan dengan lebar roll printer thermal
+        const printExtra = forPrint ? `
+            @page { size: 80mm auto; margin: 0; }
+            body { margin: 0; padding: 0; background: white; }
+            .receipt { width: 100%; border: none; box-shadow: none; border-radius: 0; padding: 10px; margin: 0; }
+        ` : '';
+
+        return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+    ${printExtra}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .receipt { ${baseStyle} }
+    .receipt-logo { text-align: center; margin-bottom: 8px; font-size: 32px; }
+    .receipt-title { text-align: center; font-size: 20px; font-weight: 800; letter-spacing: 1.5px; margin-bottom: 4px; color: #111; text-transform: uppercase; }
+    .receipt-sub { text-align: center; font-size: 12px; color: #666; margin-bottom: 6px; }
+    .receipt-tagline { text-align: center; font-size: 11px; color: #999; font-style: italic; margin-bottom: 15px; }
+    .divider-eq { border: none; border-top: 3px solid #111; margin: 12px 0; }
+    .divider-dash { border: none; border-top: 2px dashed #ddd; margin: 12px 0; }
+    
+    .meta-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+    .meta-table td { vertical-align: top; padding: 4px 0; }
+    .meta-table td:first-child { white-space: nowrap; padding-right: 10px; color: #7f8c8d; width: 70px; font-weight: 600; }
+    
+    .items-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 5px; }
+    .items-table th { text-align: left; font-weight: bold; padding: 8px 0; border-bottom: 2px solid #ddd; font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: #7f8c8d; }
+    .items-table th:last-child { text-align: center; }
+    .items-table td { border-bottom: 1px dashed #ecf0f1; }
+    .items-table tr:last-child td { border-bottom: none; }
+    .items-table td:last-child { text-align: center; font-weight: bold; }
+    
+    .summary-box { background: #f8f9fa; border-radius: 8px; padding: 15px 18px; margin-top: 15px; border: 1px solid #eee; }
+    .total-row { display: flex; justify-content: space-between; font-size: 18px; font-weight: 800; margin-bottom: 5px; color: #00a859; }
+    .bayar-row { display: flex; justify-content: space-between; font-size: 12px; color: #7f8c8d; }
+    
+    .catatan-box { background: #fff8e1; border-left: 4px solid #ffc107; padding: 8px 12px; font-size: 12px; color: #555; margin: 12px 0; border-radius: 0 4px 4px 0; }
+    
+    .footer-divider { border-top: 3px solid #111; margin: 20px 0 15px; }
+    .footer-text { text-align: center; font-size: 12px; color: #7f8c8d; line-height: 1.8; }
+    .footer-text .thank { font-size: 15px; font-weight: bold; color: #2c3e50; margin-bottom: 2px; }
+    .footer-stars { color: #f1c40f; letter-spacing: 5px; font-size: 16px; margin-bottom: 6px; }
+    .badge { display: inline-block; background: #2c3e50; color: #fff; font-size: 10px; padding: 3px 10px; border-radius: 20px; letter-spacing: 1px; margin-top: 10px; font-weight:bold; }
+</style>
+</head>
+<body>
+<div class="receipt">
+    <div class="receipt-logo">🍜</div>
+    <div class="receipt-title">BAKSO CAK BAM'Z</div>
+    <div class="receipt-sub">Jl. Raya Condro, Tempeh, Lumajang</div>
+    <div class="receipt-tagline">Bakso Segar, Harga Bersahabat</div>
+    <hr class="divider-eq">
+
+    <table class="meta-table">
+        <tr>
+            <td>Waktu</td>
+            <td>: ${waktu}</td>
+        </tr>
+        <tr>
+            <td>Pelanggan</td>
+            <td>: ${nama}</td>
+        </tr>
+        <tr>
+            <td>Pembayaran</td>
+            <td>: ${metode}</td>
+        </tr>
+    </table>
+
+    <hr class="divider-dash">
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width:80%">Item Pesanan</th>
+                <th>Qty</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${itemRows}
+        </tbody>
+    </table>
+
+    ${catatan ? `<div class="catatan-box"><b>📝 Catatan:</b> ${catatan}</div>` : ''}
+
+    <div class="summary-box">
+        <div class="total-row">
+            <span>TOTAL BAYAR</span>
+            <span>Rp ${total.toLocaleString('id-ID')}</span>
+        </div>
+        <div class="bayar-row">
+            <span>Via ${metode}</span>
+            <span>✓ Lunas</span>
+        </div>
+    </div>
+
+    <div class="footer-divider"></div>
+    <div class="footer-text">
+        <div class="footer-stars">★ ★ ★ ★ ★</div>
+        <div class="thank">Terima kasih atas kunjungannya!</div>
+        <div>Sampai jumpa lagi di Bakso Cak Bam'z 🙏</div>
+        <div><span class="badge">BAKSO CAK BAM'Z LUMAJANG</span></div>
+    </div>
+</div>
+</body>
+</html>`;
+    }
+
+    window.doReceipt = (action, idx) => {
+        const trx = salesHistory[idx];
+        if (!trx) return alert("Data transaksi tidak ditemukan!");
+
+        const fileNameSuffix = new Date().getTime();
+
+        if (action === 'print') {
+            const pw = window.open('', '_blank', 'width=420,height=700');
+            pw.document.write(buildReceiptHTML(trx, true));
+            pw.document.close();
+            pw.focus();
+            setTimeout(() => { pw.print(); pw.close(); }, 400);
+        }
+        else if (action === 'txt') {
+            const W = 32;
+            const wrap = (str, w) => {
+                const words = str.split(' ');
+                let lines = [], cur = '';
+                for (const word of words) {
+                    if ((cur ? cur + ' ' + word : word).length <= w) {
+                        cur = cur ? cur + ' ' + word : word;
+                    } else {
+                        if (cur) lines.push(cur);
+                        cur = word.length > w ? (lines.push(word.slice(0, w)), word.slice(w)) : word;
+                    }
+                }
+                if (cur) lines.push(cur);
+                return lines.join('\n');
+            };
+            const pad = (l, r) => l + ' '.repeat(Math.max(1, W - l.length - r.length)) + r;
+            const divE = '='.repeat(W), divD = '-'.repeat(W);
+            const waktu   = trx.waktu   || new Date().toLocaleString('id-ID');
+            const nama    = trx.nama    || trx.nomer_meja || trx.tipe || 'Umum';
+            const catatan = (trx.catatan && trx.catatan !== '-') ? trx.catatan : '-';
+            const total   = Number(trx.total) || 0;
+            const metode  = trx.pembayaran || trx.metode || 'Tunai';
+            const itemLines = (trx.items || '-').split(/,\s*/).map(s => wrap(s.trim(), W)).join('\n');
+            const titleSpace = ' '.repeat(Math.floor((W - 15) / 2));
+            const txt = [
+                divE, `${titleSpace}BAKSO CAK BAM'Z`, divE, '',
+                wrap('Waktu : ' + waktu, W), wrap('Nama  : ' + nama, W), '',
+                divD, 'Pesanan:', itemLines, '', 'Catatan:', wrap(catatan, W), '',
+                divD, pad('Total  :', 'Rp ' + total.toLocaleString('id-ID')),
+                pad('Bayar  :', metode), '', divE, `  Terima kasih! Sampai jumpa`, divE
+            ].join('\r\n');
+
+            const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Struk_Cak_Bamz_${fileNameSuffix}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(link.href); }, 500);
+        }
+        else if (action === 'pdf' || action === 'img') {
+            const container = document.getElementById('hidden-receipt-container');
+            container.style.cssText = 'position:absolute;top:-9999px;left:-9999px;z-index:-1;background:white;';
+            container.innerHTML = buildReceiptHTML(trx, false)
+                .replace(/<!DOCTYPE[^>]*>/i,'').replace(/<\/?html[^>]*>/gi,'')
+                .replace(/<head>[\s\S]*?<\/head>/gi,'').replace(/<\/?body[^>]*>/gi,'');
+
+            const receiptEl = container.querySelector('.receipt');
+            if (!receiptEl) return alert("Gagal render struk.");
+
+            html2canvas(receiptEl, {
+                backgroundColor: '#ffffff', scale: 3, useCORS: true,
+                width: receiptEl.offsetWidth || 380, windowWidth: 500
+            }).then(canvas => {
+                if(action === 'img') {
+                    const link = document.createElement('a');
+                    link.href = canvas.toDataURL('image/png');
+                    link.download = `Struk_Cak_Bamz_${fileNameSuffix}.png`;
+                    link.click();
+                } else {
+                    const imgData = canvas.toDataURL('image/png');
+                    const { jsPDF } = window.jspdf;
+                    const pxToMm = (px) => px * 25.4 / (96 * 3);
+                    const imgW = canvas.width;
+                    const imgH = canvas.height;
+                    const mmW  = Math.min(pxToMm(imgW), 120); 
+                    const mmH  = pxToMm(imgH) * (mmW / pxToMm(imgW));
+                    const doc  = new jsPDF({ orientation: 'p', unit: 'mm', format: [mmW, mmH + 2] });
+                    doc.addImage(imgData, 'PNG', 0, 0, mmW, mmH);
+                    doc.save(`Struk_Cak_Bamz_${fileNameSuffix}.pdf`);
+                }
+                container.innerHTML = '';
+            });
+        }
+    }
+
+    // ==========================================
+    // HELPER: LOGIKA TANGGAL HARI INI DIPERBAIKI (BUG FIX OMZET)
+    // ==========================================
+    window.getTodayStrings = function getTodayStrings() {
+        const now = new Date();
+        const d2 = String(now.getDate()).padStart(2,'0');
+        const m2 = String(now.getMonth()+1).padStart(2,'0');
+        const d1 = now.getDate();
+        const m1 = now.getMonth()+1;
+        const y = now.getFullYear();
+        
+        // Membungkus kemungkinan variasi format dari toLocaleString browser agar tidak miss
+        return [
+            `${d2}/${m2}/${y}`, // Format 05/06/2026
+            `${d1}/${m1}/${y}`, // Format 5/6/2026 (tanpa nol)
+            `${y}-${m2}-${d2}`, // Format 2026-06-05
+            now.toLocaleDateString('id-ID'),
+        ];
+    }
+
+    window.isToday = function isToday(waktuStr) {
+        if (!waktuStr) return false;
+        const todayOptions = getTodayStrings();
+        return todayOptions.some(fmt => waktuStr.includes(fmt));
+    }
+
+    // ==========================================
+    // UPDATE TAMPILAN DASHBOARD & CARD RIWAYAT
+    // ==========================================
+    window.updateUI = () => {
+        // PERBAIKAN: Selalu memanggil Number() agar tidak menjadi string gabungan
+        const allTotal = salesHistory.reduce((s, o) => s + (Number(o.total) || 0), 0);
+        const todayData = salesHistory.filter(o => isToday(o.waktu));
+        const todayTotal = todayData.reduce((s, o) => s + (Number(o.total) || 0), 0);
+        
+        document.getElementById('omzetTxt').innerText = "Rp " + todayTotal.toLocaleString('id-ID');
+        document.getElementById('trxTxt').innerText = todayData.length;
+
+        const hList = document.getElementById('historyList');
+        if (salesHistory.length === 0) {
+            hList.innerHTML = `<p style="color:var(--gray); font-size:12px; text-align:center;">Belum ada riwayat transaksi.</p>`;
+        } else {
+            hList.innerHTML = salesHistory.map((h, i) => {
+                const namaHist = h.nama ? ` (${h.nama})` : '';
+                return `
+                    <div class="history-card">
+                        <p><strong>Waktu:</strong> ${h.waktu}</p>
+                        <p><strong>Pelanggan:</strong> ${h.nomer_meja || h.tipe || 'Order'}${namaHist}</p>
+                        <p><strong>Pesanan:</strong></p>
+                        <div class="order-items-history">${h.items}</div>
+                        <p><strong>Pembayaran:</strong> ${h.pembayaran || h.metode}</p>
+                        <p class="total-price">Total: Rp ${Number(h.total || 0).toLocaleString('id-ID')}</p>
+                        
+                        <div class="history-actions">
+                            <button class="history-btn btn-print" onclick="doReceipt('print', ${i})">🧾 Print</button>
+                            <button class="history-btn btn-txt" onclick="doReceipt('txt', ${i})">📄 TXT</button>
+                            <button class="history-btn btn-pdf" onclick="doReceipt('pdf', ${i})">📑 PDF</button>
+                            <button class="history-btn btn-img" onclick="doReceipt('img', ${i})">🖼️ Image</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    // EKSPOR RIWAYAT TRANSAKSI PER HARI
+    window.exportHistory = () => {
+        const selectedDate = document.getElementById('exportDate').value;
+        if (!selectedDate) return alert("Silakan pilih tanggal!");
+
+        const parts = selectedDate.split('-');
+        const y = parts[0], m = parts[1], d = parts[2];
+        const patterns = [
+            `${d}/${m}/${y}`,
+            `${parseInt(d)}/${parseInt(m)}/${y}`,
+            `${y}-${m}-${d}`,
+            selectedDate,
+        ];
+        const filtered = salesHistory.filter(h => {
+            if (!h.waktu) return false;
+            return patterns.some(p => h.waktu.includes(p));
+        });
+
+        if (filtered.length === 0) return alert("Tidak ada transaksi pada tanggal tersebut.");
+
+        let txt = `=== RIWAYAT PENJUALAN CAK BAM'Z [${selectedDate}] ===\r\n\r\n`;
+        filtered.forEach((h, i) => {
+            const namaExport = h.nama ? ` (${h.nama})` : '';
+            txt += `${i + 1}. [${h.waktu}] (${h.nomer_meja || h.tipe || 'Meja'}${namaExport})\r\n`;
+            txt += `   Pesanan: ${h.items.replace(/\n/g, ' ')}\r\n`;
+            txt += `   Total: Rp ${Number(h.total || 0).toLocaleString()} via ${h.pembayaran || h.metode}\r\n\r\n`;
+        });
+
+        const totalOmzet = filtered.reduce((s, x) => s + (Number(x.total) || 0), 0);
+        txt += `=====================================\r\n`;
+        txt += `Total Transaksi: ${filtered.length} order\r\n`;
+        txt += `Total Omzet Hari Ini: Rp ${totalOmzet.toLocaleString()}\r\n`;
+
+        const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `Riwayat_Bakso_${selectedDate}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 500);
+    }
+
+    window.resetHistory = () => {
+        if(confirm("Hapus semua riwayat? Omzet akan kembali ke Rp 0.")) {
+            salesHistory = [];
+            localStorage.removeItem('bakso_sales_v2');
+            updateUI();
+        }
+    }
+
+    updateUI();
+    document.getElementById('exportDate').valueAsDate = new Date();
+</script>
+
+<script>
+    // FUNGSI UI DRAWER UTAMA
+    function openMenu() { document.getElementById('menuFS').classList.add('fs-open'); }
+    function closeMenu() { document.getElementById('menuFS').classList.remove('fs-open'); }
+
+    function openSection(id) {
+        document.getElementById(id).classList.add('fs-open');
+        // Sembunyikan Chloe FAB & bubble saat section fullscreen dibuka
+        const fab = document.getElementById('chloe-fab');
+        const bubble = document.getElementById('chloe-bubble');
+        const panel = document.getElementById('chloe-panel');
+        if (fab) fab.style.display = 'none';
+        if (bubble) bubble.style.display = 'none';
+        if (panel) panel.style.display = 'none';
+    }
+    function closeSection(id) {
+        document.getElementById(id).classList.remove('fs-open');
+        // Tampilkan kembali Chloe FAB setelah section ditutup
+        const fab = document.getElementById('chloe-fab');
+        if (fab) fab.style.display = 'flex';
+    }
+
+    // FUNGSI SIDEBAR
+    function openSidebar() {
+        document.getElementById('sb-overlay').classList.add('sb-open');
+        document.getElementById('sb-panel').classList.add('sb-open');
+    }
+    function closeSidebar() {
+        document.getElementById('sb-overlay').classList.remove('sb-open');
+        document.getElementById('sb-panel').classList.remove('sb-open');
+    }
+
+    // (Kalkulator & Alarm telah dihapus)
+
+</script>
+
+<div class="chloe-bubble" id="chloe-bubble">
+    <span class="cb-name">✨ Chloe AI</span>
+    Hmph... ada yang bisa aku bantu? Tanya omzet atau transaksi yuk, Goshujin-sama! 📊
+</div>
+
+<div class="chloe-fab" id="chloe-fab" onclick="toggleChloePanel()">
+    <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Chloe&backgroundColor=b6e3f4&hair=long19&eyes=variant12&mouth=variant04&eyebrows=variant10&skinColor=f8d25c" alt="Chloe">
+    <div class="notif-dot" id="chloe-notif"></div>
+</div>
+
+<div class="chloe-panel" id="chloe-panel">
+    <div class="chloe-header">
+        <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Chloe&backgroundColor=b6e3f4&hair=long19&eyes=variant12&mouth=variant04&eyebrows=variant10&skinColor=f8d25c" alt="Chloe">
+        <div class="ch-info">
+            <div class="ch-name">Chloe AI ✨</div>
+            <div class="ch-sub">● Online · Asisten Kasir Cak Bam'z</div>
+        </div>
+        <button class="chloe-close-btn" onclick="toggleChloePanel()">✕</button>
+    </div>
+    <div class="chloe-tabs">
+        <button class="chloe-tab active" id="ctab-chat" onclick="switchChloeTab('chat')">💬 Tanya Chloe</button>
+        <button class="chloe-tab" id="ctab-pembukuan" onclick="switchChloeTab('pembukuan')">📊 Pembukuan AI</button>
+    </div>
+
+    <div id="chloe-body-chat" class="chloe-body">
+        <div class="chloe-logs" id="chloe-logs">
+            <div class="chloe-msg ai">Haii~! Aku Chloe 😤 bisa bantu jawab soal <b>pesanan, menu, omzet, atau apapun</b> ya, Goshujin-sama! Jangan sungkan tanya!</div>
+        </div>
+        <div class="chloe-input-row">
+            <input type="text" id="chloe-input" placeholder="Tanya Chloe sesuatu..." onkeypress="if(event.key==='Enter') sendChloeMsg()">
+            <button class="chloe-send" onclick="sendChloeMsg()">Kirim</button>
+        </div>
+    </div>
+
+    <div id="chloe-body-pembukuan" class="chloe-body" style="display:none;">
+        <div class="chloe-buku">
+            <div class="buku-summary" id="buku-summary-card">
+                <h4>OMZET HARI INI</h4>
+                <div class="buku-omzet" id="buku-omzet-val">Rp 0</div>
+                <div class="buku-sub" id="buku-trx-val">0 transaksi</div>
+            </div>
+            <div class="buku-period-row">
+                <select id="buku-period">
+                    <option value="today">Hari Ini</option>
+                    <option value="yesterday">Kemarin</option>
+                    <option value="week">7 Hari Terakhir</option>
+                    <option value="month">Bulan Ini</option>
+                    <option value="all">Semua Data</option>
+                </select>
+                <button onclick="analisisBuku()">Analisis AI ✨</button>
+            </div>
+            <div class="buku-quick-btns">
+                <div class="buku-quick-btn" onclick="quickAnalysis('top_menu')">
+                    <span class="bq-icon">🏆</span>Menu Terlaris
+                </div>
+                <div class="buku-quick-btn" onclick="quickAnalysis('omzet_trend')">
+                    <span class="bq-icon">📈</span>Tren Omzet
+                </div>
+                <div class="buku-quick-btn" onclick="quickAnalysis('jam_ramai')">
+                    <span class="bq-icon">🕐</span>Jam Ramai
+                </div>
+                <div class="buku-quick-btn" onclick="quickAnalysis('rekomendasi')">
+                    <span class="bq-icon">💡</span>Saran Chloe
+                </div>
+            </div>
+            <div class="buku-ai-loading" id="buku-loading">⏳ Chloe sedang menganalisis data...</div>
+            <div class="buku-ai-result" id="buku-result"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const CHLOE_API_KEY = "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";
+    const CHLOE_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+    let chloePanelOpen = false;
+
+    function toggleChloePanel() {
+        chloePanelOpen = !chloePanelOpen;
+        const panel = document.getElementById('chloe-panel');
+        const bubble = document.getElementById('chloe-bubble');
+        panel.style.display = chloePanelOpen ? 'flex' : 'none';
+        bubble.style.display = 'none';
+        document.getElementById('chloe-notif').style.display = 'none';
+        if (chloePanelOpen) refreshBukuSummary();
+    }
+
+    function openChloePanel() {
+        chloePanelOpen = true;
+        document.getElementById('chloe-panel').style.display = 'flex';
+        document.getElementById('chloe-bubble').style.display = 'none';
+        refreshBukuSummary();
+    }
+
+    function switchChloeTab(tab) {
+        document.getElementById('chloe-body-chat').style.display = tab === 'chat' ? 'flex' : 'none';
+        document.getElementById('chloe-body-pembukuan').style.display = tab === 'pembukuan' ? 'flex' : 'none';
+        document.getElementById('ctab-chat').classList.toggle('active', tab === 'chat');
+        document.getElementById('ctab-pembukuan').classList.toggle('active', tab === 'pembukuan');
+        if (tab === 'pembukuan') refreshBukuSummary();
+    }
+
+    setTimeout(() => {
+        const bubble = document.getElementById('chloe-bubble');
+        const notif = document.getElementById('chloe-notif');
+        if (!chloePanelOpen) {
+            bubble.style.display = 'block';
+            notif.style.display = 'block';
+            setTimeout(() => { bubble.style.display = 'none'; }, 7000);
+        }
+    }, 5000);
+
+    function refreshBukuSummary() {
+        const history = JSON.parse(localStorage.getItem('bakso_sales_v2')) || [];
+        const todayData = history.filter(h => isToday(h.waktu));
+        // PERBAIKAN: Selalu memanggil Number() pada h.total
+        const totalOmzet = todayData.reduce((s, h) => s + (Number(h.total) || 0), 0);
+        const todayDisplay = getTodayStrings()[0]; 
+        document.getElementById('buku-omzet-val').innerText = 'Rp ' + totalOmzet.toLocaleString('id-ID');
+        document.getElementById('buku-trx-val').innerText = todayData.length + ' transaksi · ' + todayDisplay;
+    }
+
+    function getFilteredHistory(period) {
+        const history = JSON.parse(localStorage.getItem('bakso_sales_v2')) || [];
+        const now = new Date();
+        if (period === 'all') return history;
+        if (period === 'today') return history.filter(h => isToday(h.waktu));
+        return history.filter(h => {
+            if (!h.waktu) return false;
+            try {
+                const dateStr = h.waktu.split(',')[0].trim(); 
+                const dp = dateStr.split('/');
+                if (dp.length < 3) return false;
+                const d = new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0]));
+                if (period === 'yesterday') {
+                    const yest = new Date(now); yest.setDate(yest.getDate()-1);
+                    return d.toDateString() === yest.toDateString();
+                }
+                const diff = (now - d) / (1000 * 60 * 60 * 24);
+                if (period === 'week') return diff <= 7;
+                if (period === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            } catch(e) { return true; }
+            return true;
+        });
+    }
+
+    async function analisisBuku() {
+        const period = document.getElementById('buku-period').value;
+        const data = getFilteredHistory(period);
+        if (data.length === 0) {
+            showBukuResult('Hmph! Tidak ada data transaksi untuk periode ini, Goshujin-sama. Coba pilih periode lain! 📭');
+            return;
+        }
+
+        const periodLabel = {today:'hari ini',yesterday:'kemarin',week:'7 hari terakhir',month:'bulan ini',all:'semua data'}[period];
+        const totalOmzet = data.reduce((s,h) => s + (Number(h.total) || 0), 0);
+        const avgPerTrx = Math.round(totalOmzet / data.length);
+
+        const menuCount = {};
+        data.forEach(h => {
+            const items = (h.items || '').split('\n');
+            items.forEach(item => {
+                const m = item.match(/^(.+?)\s*x(\d+)/);
+                if (m) { const name = m[1].trim(); menuCount[name] = (menuCount[name]||0)+parseInt(m[2]); }
+                else if (item.trim()) { const name = item.trim().replace(/^[-•]\s*/,''); menuCount[name] = (menuCount[name]||0)+1; }
+            });
+        });
+        const topMenu = Object.entries(menuCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        const topMenuStr = topMenu.map(([n,c])=>`- ${n}: ${c}x`).join('\n') || 'Tidak ada data item.';
+
+        const prompt = `Kamu adalah Chloe, asisten kasir tsundere dari Bakso Cak Bam'z Lumajang.
+Data penjualan untuk periode: ${periodLabel}
+Total transaksi: ${data.length}
+Total omzet: Rp ${totalOmzet.toLocaleString('id-ID')}
+Rata-rata per transaksi: Rp ${avgPerTrx.toLocaleString('id-ID')}
+Menu terlaris:
+${topMenuStr}
+
+Tugas: Berikan analisis pembukuan singkat, padat, dan actionable dengan gaya tsundere (tetap panggil Goshujin-sama). 
+Sertakan: ringkasan performa, menu andalan, dan 1-2 saran nyata untuk meningkatkan omzet. Maksimal 8 baris.`;
+
+        showBukuLoading(true);
+        try {
+            const res = await fetch(CHLOE_API_URL, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json','Authorization':'Bearer '+CHLOE_API_KEY},
+                body: JSON.stringify({
+                    model: 'llama-3.3-70b-versatile',
+                    messages: [{role:'user',content:prompt}],
+                    max_tokens: 400
+                })
+            });
+            const json = await res.json();
+            const reply = json.choices?.[0]?.message?.content || 'Hmph! Analisis gagal, Goshujin-sama. Coba lagi ya!';
+            showBukuResult(reply);
+        } catch(e) {
+            showBukuResult('⚠️ Gagal menghubungi Chloe. Periksa koneksi, Goshujin-sama!');
+        }
+        showBukuLoading(false);
+    }
+
+    async function quickAnalysis(type) {
+        const history = JSON.parse(localStorage.getItem('bakso_sales_v2')) || [];
+        if (history.length === 0) {
+            showBukuResult('Hmph! Data transaksi masih kosong nih, Goshujin-sama. Selesaikan beberapa pesanan dulu! 🛒');
+            return;
+        }
+
+        let prompt = '';
+        if (type === 'top_menu') {
+            const menuCount = {};
+            history.forEach(h => {
+                (h.items||'').split('\n').forEach(item => {
+                    const m = item.match(/^(.+?)\s*x(\d+)/);
+                    if (m) { menuCount[m[1].trim()] = (menuCount[m[1].trim()]||0)+parseInt(m[2]); }
+                    else if (item.trim()) { const n=item.trim().replace(/^[-•]\s*/,''); menuCount[n]=(menuCount[n]||0)+1; }
+                });
+            });
+            const top = Object.entries(menuCount).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([n,c])=>`${n}: ${c}x`).join(', ');
+            prompt = `Kasir Bakso Cak Bam'z. Menu terlaris dari ${history.length} transaksi: ${top}. Sebagai Chloe (tsundere, panggil Goshujin-sama), beri komentar singkat menarik dan saran untuk mengoptimalkan menu ini. Maks 5 baris.`;
+        }
+        else if (type === 'omzet_trend') {
+            const byDay = {};
+            history.forEach(h => {
+                if (!h.waktu) return;
+                const d = h.waktu.split(',')[0].trim();
+                byDay[d] = (byDay[d]||0) + (Number(h.total)||0);
+            });
+            const trend = Object.entries(byDay).slice(-7).map(([d,v])=>`${d}: Rp ${v.toLocaleString()}`).join('\n');
+            prompt = `Kasir Bakso Cak Bam'z. Tren omzet per hari:\n${trend}\nSebagai Chloe (tsundere, panggil Goshujin-sama), analisis tren ini dan beri saran. Maks 6 baris.`;
+        }
+        else if (type === 'jam_ramai') {
+            const byHour = {};
+            history.forEach(h => {
+                if (!h.waktu) return;
+                try {
+                    const timePart = h.waktu.split(',')[1]?.trim() || h.waktu.split(' ')[1];
+                    const hour = timePart?.split('.')[0] || timePart?.split(':')[0];
+                    if (hour) { byHour[hour+':00'] = (byHour[hour+':00']||0)+1; }
+                } catch(e){}
+            });
+            const jamStr = Object.entries(byHour).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([j,c])=>`Jam ${j}: ${c} pesanan`).join(', ') || 'Data jam tidak tersedia';
+            prompt = `Kasir Bakso Cak Bam'z. Data jam ramai dari transaksi: ${jamStr}. Sebagai Chloe (tsundere, panggil Goshujin-sama), beri insight jam sibuk dan saran persiapan. Maks 5 baris.`;
+        }
+        else if (type === 'rekomendasi') {
+            const totalOmzet = history.reduce((s,h) => s + (Number(h.total) || 0), 0);
+            const avgTrx = Math.round(totalOmzet/history.length);
+            const metode = {};
+            history.forEach(h=>{const m=h.pembayaran||h.metode||'Tunai'; metode[m]=(metode[m]||0)+1;});
+            const metodeStr = Object.entries(metode).map(([m,c])=>`${m}:${c}x`).join(', ');
+            prompt = `Kasir Bakso Cak Bam'z. Total ${history.length} transaksi, omzet Rp ${totalOmzet.toLocaleString()}, avg Rp ${avgTrx.toLocaleString()}/transaksi, metode bayar: ${metodeStr}. Sebagai Chloe (tsundere, panggil Goshujin-sama), beri 3 rekomendasi bisnis konkret untuk meningkatkan omzet. Maks 8 baris.`;
+        }
+
+        showBukuLoading(true);
+        try {
+            const res = await fetch(CHLOE_API_URL, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json','Authorization':'Bearer '+CHLOE_API_KEY},
+                body: JSON.stringify({
+                    model: 'llama-3.3-70b-versatile',
+                    messages: [{role:'user',content:prompt}],
+                    max_tokens: 350
+                })
+            });
+            const json = await res.json();
+            const reply = json.choices?.[0]?.message?.content || 'Analisis gagal, coba lagi Goshujin-sama!';
+            showBukuResult(reply);
+        } catch(e) {
+            showBukuResult('⚠️ Gagal koneksi Chloe. Coba lagi ya!');
+        }
+        showBukuLoading(false);
+    }
+
+    function showBukuLoading(show) {
+        document.getElementById('buku-loading').style.display = show ? 'block' : 'none';
+        if (show) document.getElementById('buku-result').style.display = 'none';
+    }
+    function showBukuResult(text) {
+        const el = document.getElementById('buku-result');
+        el.innerText = text;
+        el.style.display = 'block';
+    }
+
+    async function sendChloeMsg() {
+        const input = document.getElementById('chloe-input');
+        const text = input.value.trim();
+        if (!text) return;
+        const logs = document.getElementById('chloe-logs');
+        logs.innerHTML += `<div class="chloe-msg user">${text}</div>`;
+        input.value = '';
+        logs.scrollTop = logs.scrollHeight;
+
+        const typId = 'ct-' + Date.now();
+        logs.innerHTML += `<div class="chloe-msg ai typing" id="${typId}">Mengetik...</div>`;
+        logs.scrollTop = logs.scrollHeight;
+
+        const history = JSON.parse(localStorage.getItem('bakso_sales_v2')) || [];
+        const totalOmzet = history.reduce((s,h) => s + (Number(h.total) || 0), 0);
+        const todayDisplay = getTodayStrings()[0];
+        const todayData = history.filter(h => isToday(h.waktu));
+        const omzetHariIni = todayData.reduce((s,h) => s + (Number(h.total) || 0), 0);
+
+        const sysPrompt = `Kamu adalah Chloe, asisten kasir tsundere dari Bakso Cak Bam'z Lumajang.
+Gaya: tsundere (sedikit ketus tapi helpful), panggil kasir dengan "Goshujin-sama".
+Data kasir saat ini:
+- Total transaksi tersimpan: ${history.length}
+- Total omzet keseluruhan: Rp ${totalOmzet.toLocaleString('id-ID')}
+- Omzet hari ini (${todayDisplay}): Rp ${omzetHariIni.toLocaleString('id-ID')} dari ${todayData.length} transaksi
+Jawab pertanyaan kasir dengan singkat, akurat, dan gaya tsundere. JANGAN format JSON.`;
+
+        try {
+            const res = await fetch(CHLOE_API_URL, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json','Authorization':'Bearer '+CHLOE_API_KEY},
+                body: JSON.stringify({
+                    model: 'llama-3.3-70b-versatile',
+                    messages: [{role:'system',content:sysPrompt},{role:'user',content:text}],
+                    max_tokens: 300
+                })
+            });
+            const json = await res.json();
+            const reply = json.choices?.[0]?.message?.content?.trim() || 'Hmph! Ada error nih, Goshujin-sama!';
+            const el = document.getElementById(typId);
+            if (el) { el.classList.remove('typing'); el.innerText = reply; }
+        } catch(e) {
+            const el = document.getElementById(typId);
+            if (el) { el.innerText = '⚠️ Gagal konek ke Chloe, Goshujin-sama!'; }
+        }
+        logs.scrollTop = logs.scrollHeight;
+    }
+</script>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- CHAT KASIR FAB + PANEL                          -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<!-- FAB tombol chat (kiri bawah) -->
+<div class="chat-fab" id="chat-kasir-fab" onclick="toggleChatKasirPanel()">
+    💬
+    <div class="chat-fab-dot" id="chat-fab-dot" style="display:none;">!</div>
+</div>
+
+<!-- Panel utama chat kasir -->
+<div class="ck-kasir-panel" id="ck-kasir-panel">
+    <!-- Header panel -->
+    <div class="ck-kasir-header">
+        <div class="ckh-icon">💬</div>
+        <div class="ckh-info">
+            <div class="ckh-title">Chat Pelanggan</div>
+            <div class="ckh-sub" id="ck-kasir-sub">Pilih pesanan untuk chat</div>
+        </div>
+        <button class="ck-kasir-close" onclick="toggleChatKasirPanel()">✕</button>
+    </div>
+
+    <!-- VIEW 1: Daftar pesanan yang punya chat -->
+    <div class="ck-order-list" id="ck-order-list-view">
+        <div class="ck-empty-chat" id="ck-empty-msg">
+            🛒 Belum ada pesanan aktif.<br>Pesanan masuk akan muncul di sini.
+        </div>
+    </div>
+
+    <!-- VIEW 2: Chat per pesanan -->
+    <div class="ck-chat-view" id="ck-chat-view">
+        <div class="ck-chat-topbar">
+            <button class="ck-chat-back" onclick="backToOrderList()">‹</button>
+            <div class="ckt-info">
+                <div class="ckt-name" id="ckt-name">—</div>
+                <div class="ckt-id" id="ckt-id">—</div>
+            </div>
+        </div>
+        <div class="ck-chat-body" id="ck-chat-body">
+            <div style="text-align:center; color:#b2bec3; font-size:11px; margin-top:12px;">Memuat pesan...</div>
+        </div>
+        <div class="ck-input-bar">
+            <input type="text" id="ck-kasir-input" placeholder="Tulis balasan..." onkeypress="if(event.key==='Enter') sendKasirMsg()" maxlength="300">
+            <button class="ck-send-k" onclick="sendKasirMsg()">Kirim</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { getDatabase, ref, onValue, push, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+
+    // Gunakan app Firebase yang sudah ada (dari script module pertama)
+    const existingApps = getApps();
+    const app = existingApps.length > 0 ? existingApps[0] : initializeApp({ databaseURL: "https://bakso-cak-bamz-default-rtdb.asia-southeast1.firebasedatabase.app/" });
+    const db = getDatabase(app);
+
+    // State chat kasir
+    let ckKasirOpen = false;
+    let ckCurrentFbKey = null;
+    let ckCurrentName = '';
+    let ckMsgListener = null;
+    let ckOrdersListener = null;
+    let activeOrders = {}; // { fbKey: { nama, waktu } }
+
+    // ── Toggle panel ────────────────────────────────────
+    window.toggleChatKasirPanel = () => {
+        ckKasirOpen = !ckKasirOpen;
+        document.getElementById('ck-kasir-panel').style.display = ckKasirOpen ? 'flex' : 'none';
+        if (ckKasirOpen) {
+            renderOrderList();
+            document.getElementById('chat-fab-dot').style.display = 'none';
+        }
+    };
+
+    // ── Render daftar pesanan yang ada chat-nya ─────────
+    function renderOrderList() {
+        const listEl = document.getElementById('ck-order-list-view');
+        listEl.innerHTML = '';
+
+        const keys = Object.keys(activeOrders);
+        if (keys.length === 0) {
+            listEl.innerHTML = '<div class="ck-empty-chat">🛒 Belum ada pesanan aktif.<br>Pesanan masuk akan muncul di sini.</div>';
+            return;
+        }
+
+        keys.forEach(fbKey => {
+            const o = activeOrders[fbKey];
+            const item = document.createElement('div');
+            item.className = 'ck-order-item';
+            item.id = 'ck-oitem-' + fbKey;
+            item.onclick = () => openChatKasirOrder(fbKey, o.label);
+            item.innerHTML = `
+                <div class="cko-avatar">
+                    🧑
+                    <div class="cko-unread-dot" id="cko-dot-${fbKey}"></div>
+                </div>
+                <div class="cko-info">
+                    <div class="cko-name">${o.label}</div>
+                    <div class="cko-preview" id="cko-prev-${fbKey}">Ketuk untuk membuka chat</div>
+                </div>
+                <div class="cko-arrow">›</div>
+            `;
+            listEl.appendChild(item);
+        });
+    }
+
+    // ── Dengarkan pesanan aktif dari Firebase ──────────
+    onValue(ref(db, 'pesanan'), (snap) => {
+        const data = snap.val() || {};
+        activeOrders = {};
+        for (const [id, o] of Object.entries(data)) {
+            const label = (o.nomer_meja || o.tipe || 'Meja') + (o.nama ? ` (${o.nama})` : '');
+            activeOrders[id] = { label, waktu: o.waktu };
+        }
+        if (ckKasirOpen && !ckCurrentFbKey) renderOrderList();
+
+        // Expose ke window untuk tombol di order card
+        window._activeOrders = activeOrders;
+    });
+
+    // Dengarkan unread per pesanan aktif — update dot
+    function listenAllUnread() {
+        onValue(ref(db, 'chats'), (snap) => {
+            const allChats = snap.val() || {};
+            let anyUnread = false;
+            for (const [fbKey, chatData] of Object.entries(allChats)) {
+                const hasUnread = chatData.unreadKasir === true;
+                if (hasUnread) anyUnread = true;
+
+                // Dot di list panel
+                const dotEl = document.getElementById('cko-dot-' + fbKey);
+                if (dotEl) dotEl.style.display = hasUnread ? 'block' : 'none';
+
+                // Badge di order card utama
+                const badge = document.getElementById('unread-badge-' + fbKey);
+                if (badge) badge.style.display = hasUnread ? 'inline-block' : 'none';
+
+                // Preview pesan terakhir
+                const prevEl = document.getElementById('cko-prev-' + fbKey);
+                if (prevEl && chatData.messages) {
+                    const msgs = Object.values(chatData.messages).sort((a,b)=>a.timestamp-b.timestamp);
+                    const last = msgs[msgs.length - 1];
+                    if (last) {
+                        const preview = last.type === 'location' ? '📍 Lokasi dikirim' : last.text;
+                        const who = last.sender === 'customer' ? 'Pelanggan' : 'Kasir';
+                        prevEl.textContent = `${who}: ${preview.slice(0, 40)}`;
+                    }
+                }
+            }
+            // FAB dot global
+            document.getElementById('chat-fab-dot').style.display = anyUnread ? 'flex' : 'none';
+        });
+    }
+    listenAllUnread();
+
+    // ── Buka chat satu pesanan ─────────────────────────
+    window.openChatKasirOrder = (fbKey, label) => {
+        ckCurrentFbKey = fbKey;
+        ckCurrentName = label;
+
+        // Pastikan panel terbuka
+        if (!ckKasirOpen) {
+            ckKasirOpen = true;
+            document.getElementById('ck-kasir-panel').style.display = 'flex';
+        }
+
+        // Switch ke view chat
+        document.getElementById('ck-order-list-view').style.display = 'none';
+        const chatView = document.getElementById('ck-chat-view');
+        chatView.style.display = 'flex';
+        document.getElementById('ckt-name').textContent = label;
+        document.getElementById('ckt-id').textContent = 'ID: ' + fbKey.slice(-8);
+
+        // Tandai sudah dibaca
+        update(ref(db, 'chats/' + fbKey), { unreadKasir: false }).catch(() => {});
+        const badge = document.getElementById('unread-badge-' + fbKey);
+        if (badge) badge.style.display = 'none';
+
+        // Listen pesan real-time
+        if (ckMsgListener) ckMsgListener();
+        ckMsgListener = onValue(ref(db, 'chats/' + fbKey + '/messages'), (snap) => {
+            renderKasirMessages(snap.val());
+        });
+    };
+
+    // ── Kembali ke daftar ─────────────────────────────
+    window.backToOrderList = () => {
+        ckCurrentFbKey = null;
+        if (ckMsgListener) { ckMsgListener(); ckMsgListener = null; }
+        document.getElementById('ck-chat-view').style.display = 'none';
+        document.getElementById('ck-order-list-view').style.display = 'block';
+        renderOrderList();
+    };
+
+    // ── Render pesan ──────────────────────────────────
+    function renderKasirMessages(msgs) {
+        const body = document.getElementById('ck-chat-body');
+        if (!msgs || Object.keys(msgs).length === 0) {
+            body.innerHTML = '<div style="text-align:center; color:#b2bec3; font-size:11px; margin-top:24px;">Belum ada pesan dari pelanggan. 👋</div>';
+            return;
+        }
+        const sorted = Object.values(msgs).sort((a, b) => a.timestamp - b.timestamp);
+        body.innerHTML = sorted.map(m => {
+            const isSent = m.sender === 'kasir';
+            const cls = isSent ? 'sent' : 'recv';
+            const label = isSent ? '👨‍🍳 Kasir' : '🧑 Pelanggan';
+            const time = (() => {
+                const d = new Date(m.timestamp);
+                return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+            })();
+            let content;
+            if (m.type === 'location') {
+                content = `<div class="ck-label-k">${label}</div>📍 <a href="${m.text}" target="_blank" rel="noopener" class="ck-loc-link-k">Lihat Lokasi di Maps</a><div class="ck-time-k">${time}</div>`;
+            } else {
+                content = `<div class="ck-label-k">${label}</div>${m.text}<div class="ck-time-k">${time}</div>`;
+            }
+            return `<div class="ck-msg-k ${cls}">${content}</div>`;
+        }).join('');
+        body.scrollTop = body.scrollHeight;
+    }
+
+    // ── Kirim balasan kasir ──────────────────────────
+    window.sendKasirMsg = () => {
+        const input = document.getElementById('ck-kasir-input');
+        const text = input.value.trim();
+        if (!text) return;
+
+        if (!ckCurrentFbKey) {
+            const body = document.getElementById('ck-chat-body');
+            if (!document.getElementById('ck-k-noorder-msg')) {
+                const msg = document.createElement('div');
+                msg.id = 'ck-k-noorder-msg';
+                msg.style.cssText = 'background:#FFF3CD;border:1px solid #FFECB5;color:#856404;padding:10px 14px;border-radius:10px;font-size:12px;text-align:center;margin:8px 0;line-height:1.5;';
+                msg.innerHTML = '⚠️ <b>Tidak ada pesanan yang dipilih.</b><br>Pilih pesanan terlebih dahulu dari daftar.';
+                if (body) { body.appendChild(msg); body.scrollTop = body.scrollHeight; }
+                setTimeout(() => { if (msg.parentNode) msg.remove(); }, 4000);
+            }
+            return;
+        }
+
+        const ts = Date.now();
+        const msg = { sender: 'kasir', type: 'text', text, timestamp: ts };
+
+        // Optimistic rendering — tampilkan pesan kasir langsung
+        const body = document.getElementById('ck-chat-body');
+        const timeStr = new Date(ts).getHours().toString().padStart(2,'0') + ':' + new Date(ts).getMinutes().toString().padStart(2,'0');
+        const tempId = 'tmp-k-' + ts;
+        const tempEl = document.createElement('div');
+        tempEl.className = 'ck-msg-k sent';
+        tempEl.id = tempId;
+        tempEl.innerHTML = `<div class="ck-label-k">👨‍🍳 Kasir</div>${text}<div class="ck-time-k">${timeStr}</div>`;
+        body.appendChild(tempEl);
+        body.scrollTop = body.scrollHeight;
+
+        input.value = '';
+
+        push(ref(db, 'chats/' + ckCurrentFbKey + '/messages'), msg).then(() => {
+            update(ref(db, 'chats/' + ckCurrentFbKey), { unreadCustomer: true });
+        }).catch((err) => {
+            // Hapus pesan optimistic jika gagal
+            const el = document.getElementById(tempId);
+            if (el) el.remove();
+            input.value = text;
+            console.error('Gagal kirim pesan:', err);
+        });
+    };
+</script>
+
+</body></html>
